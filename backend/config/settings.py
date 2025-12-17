@@ -10,21 +10,29 @@ DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
 ALLOWED_HOSTS = [host for host in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if host]
 
 INSTALLED_APPS = [
+    # Custom user MUST be first
+    "apps.users",
+
+    # Django core
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    # Third-party
     "rest_framework",
+
+    # Local apps
     "apps.core",
-    "apps.users",
     "apps.orgs",
     "apps.students",
     "apps.appointments",
     "apps.scheduling",
     "apps.communications",
 ]
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
