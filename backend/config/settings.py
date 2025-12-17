@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+DB_DIR = BASE_DIR.parent / "database"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "development-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
@@ -58,7 +59,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": DB_DIR / "db.sqlite3",
     }
 }
 
