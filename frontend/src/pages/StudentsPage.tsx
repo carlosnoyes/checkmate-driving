@@ -16,7 +16,7 @@ export default function StudentsPage() {
   }, []);
 
   return (
-    <div style={{ display: "grid", gap: "16px", padding: "24px", background: "#0f172a", color: "#f1f5f9" }}>
+    <div style={{ display: "grid", gap: "16px", padding: "24px" }}>
       <header>
         <h2 style={{ margin: 0 }}>Students</h2>
         <p style={{ color: "#94a3b8" }}>Manage student records and contact details.</p>

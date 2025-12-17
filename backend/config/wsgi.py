@@ -1,4 +1,4 @@
-"""WSGI config for Checkmate AI Scheduler."""
+"""WSGI config for Checkmate Driving."""
 import os
 from django.core.wsgi import get_wsgi_application
 

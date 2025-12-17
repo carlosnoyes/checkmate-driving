@@ -1,0 +1,5 @@
+appointment_id,date,start,end,student,instructor,vehicle,location,status
+SCH-201,2025-01-08,09:00,10:30,Jordan Patel,Dev Patel,Hybrid-12,Main Campus,Scheduled
+SCH-202,2025-01-08,13:00,14:30,Avery Chen,Jake Morrison,EV-07,Main Campus,Confirmed
+SCH-203,2025-01-09,10:30,12:00,River Singh,Helena Brooks,Compact-22,Annex,Planned
+SCH-204,2025-01-10,16:00,17:00,Morgan Lee,Samira Ochoa,Sedan-18,Virtual,Tentative

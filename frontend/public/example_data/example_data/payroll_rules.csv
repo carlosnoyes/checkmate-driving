@@ -1,0 +1,4 @@
+rule_id,description,rate_type,rate_value,applies_to
+PR-01,Standard lesson rate,Hourly,28,All instructors
+PR-02,Weekend premium,Percent,10,Weekend lessons
+PR-03,EV vehicle stipend,Flat,12,EV sessions

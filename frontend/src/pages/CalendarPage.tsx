@@ -17,7 +17,7 @@ export default function CalendarPage() {
   }, []);
 
   return (
-    <div style={{ padding: "24px", background: "#0f172a", minHeight: "100vh", color: "#f1f5f9" }}>
+    <div style={{ padding: "24px" }}>
       <header style={{ marginBottom: "16px" }}>
         <h2 style={{ margin: 0 }}>Calendar</h2>
         <p style={{ color: "#94a3b8" }}>Read-only calendar view and appointment intake.</p>

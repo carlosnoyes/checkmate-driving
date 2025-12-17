@@ -1,0 +1,3 @@
+payroll_id,period,processed_date,total_hours,total_pay,status
+PRUN-01,Dec 16-31,2025-01-02,182,5650,Submitted
+PRUN-02,Jan 01-15,2025-01-16,94,2985,Queued

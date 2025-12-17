@@ -1,4 +1,4 @@
-"""Django settings for Checkmate AI Scheduler MVP."""
+"""Django settings for Checkmate Driving MVP."""
 from pathlib import Path
 import os
 
@@ -97,7 +97,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.AllowAny",  # TODO: Re-enable IsAuthenticated after implementing login
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 25,

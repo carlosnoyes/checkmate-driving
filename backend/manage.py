@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Django management entrypoint for Checkmate AI Scheduler MVP."""
+"""Django management entrypoint for Checkmate Driving MVP."""
 import os
 import sys
 

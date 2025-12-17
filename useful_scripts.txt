@@ -1,6 +1,31 @@
 ### Powershell to return file structure ###
-tree backend /F > project_tree.txt
-tree frontend /F >> project_tree.txt
-tree docs /F >> project_tree.txt
-tree database /F >> project_tree.txt
+
+function Show-SmartTree {
+    param (
+        [string]$Path = ".",
+        [int]$Level = 0,
+        # We manually list the folders from your .gitignore here
+        [string[]]$Exclude = @(".git", ".idea", ".vscode", ".venv", "__pycache__", "node_modules", "dist", "build", ".claude", "backups")
+    )
+    
+    $indent = "    " * $Level
+    # Get files and folders
+    $items = Get-ChildItem -Path $Path -ErrorAction SilentlyContinue | Sort-Object { $_.PSIsContainer } -Descending
+    
+    foreach ($item in $items) {
+        # Skip if the item name is in our exclude list
+        if ($Exclude -contains $item.Name) { continue }
+        
+        if ($item.PSIsContainer) {
+            Write-Output "$indent+---$($item.Name)"
+            # Recursively call the function for subdirectories
+            Show-SmartTree -Path $item.FullName -Level ($Level + 1) -Exclude $Exclude
+        } else {
+            Write-Output "$indent    $($item.Name)"
+        }
+    }
+}
+
+# Run it and save to file
+Show-SmartTree > project_tree.txt
 

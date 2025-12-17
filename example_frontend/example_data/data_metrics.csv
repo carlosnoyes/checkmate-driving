@@ -1,0 +1,5 @@
+metric,period,value,trend,target
+New students (weekly),2025-W01,22,up,20
+Lessons delivered (week),2025-W01,71,up,65
+Average satisfaction,Dec-2024,4.7,flat,4.6
+On-time start %,Dec-2024,93%,up,90%

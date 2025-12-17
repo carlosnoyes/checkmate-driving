@@ -1,0 +1,6 @@
+id,name,status,enrolled_course,next_drive,progress_pct,advisor
+STU-001,Avery Chen,Active,Teen Defensive Driving,2025-01-10,65,Garcia
+STU-002,Jordan Patel,Active,Behind the Wheel,2025-01-09,40,Nguyen
+STU-003,Morgan Lee,Paused,Adult Brush Up,2025-01-12,20,Lopez
+STU-004,River Singh,Active,Permit Prep,2025-01-08,85,Williams
+STU-005,Casey Diaz,Graduated,Full Licensing Track,2024-12-28,100,Khan

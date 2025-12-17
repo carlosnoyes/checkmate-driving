@@ -1,0 +1,5 @@
+payment_id,student,amount,method,status,invoice_date,due_date,notes
+PAY-501,Avery Chen,220,Card,Paid,2025-01-02,2025-01-09,Includes road test fee
+PAY-502,Jordan Patel,140,Cash,Pending,2025-01-04,2025-01-12,Awaiting drop-off
+PAY-503,River Singh,180,Card,Failed,2025-01-03,2025-01-10,Retry scheduled
+PAY-504,Morgan Lee,95,ACH,Paid,2024-12-29,2025-01-05,Adult refresher

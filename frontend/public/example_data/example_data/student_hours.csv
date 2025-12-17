@@ -1,0 +1,5 @@
+student_id,name,logged_hours,required_hours,last_entry,coach
+STU-001,Avery Chen,18,25,2025-01-06,Garcia
+STU-002,Jordan Patel,9,20,2025-01-05,Nguyen
+STU-003,River Singh,7,20,2025-01-03,Williams
+STU-004,Morgan Lee,3,15,2025-01-02,Ochoa

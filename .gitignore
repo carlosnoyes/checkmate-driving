@@ -1,3 +1,74 @@
+# ========================
+# GLOBAL / OS / IDE
+# ========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+
+# ========================
+# PYTHON (BACKEND)
+# ========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.env
 .venv/
-database/
-.claude
+
+# Django specific
+*.log
+local_settings.py
+# Ignore collected static files (keep the source folder, ignore the output)
+/backend/staticfiles/
+
+# User-uploaded media (keep the folder, ignore the content)
+/backend/media/
+
+# ========================
+# NODE / REACT (FRONTEND)
+# ========================
+# Dependencies - CRITICAL to ignore
+/frontend/node_modules/
+
+# Production build output
+/frontend/dist/
+/frontend/build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ========================
+# DATABASE & BACKUPS
+# ========================
+# Ignore actual database files to prevent binary conflicts
+*.sqlite3
+/database/*.sqlite3
+
+# Ignore SQL dumps/backups (unless you intentionally want to version control them)
+/database/backups/*.sql
+
+# ========================
+# DOCS & SCRATCHPADS
+# ========================
+# Temporary file tree generation
+project_tree.txt
+
+# Secrets (just in case)
+secrets.txt
