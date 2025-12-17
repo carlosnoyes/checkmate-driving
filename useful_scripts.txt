@@ -1,0 +1,6 @@
+### Powershell to return file structure ###
+tree backend /F > project_tree.txt
+tree frontend /F >> project_tree.txt
+tree docs /F >> project_tree.txt
+tree database /F >> project_tree.txt
+
