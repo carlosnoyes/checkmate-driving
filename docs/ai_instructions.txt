@@ -1,0 +1,384 @@
+Absolutely. Below is a **clean, authoritative rewrite** of your `.txt` document, **explicitly scoped to the MVP** you defined:
+
+> **MVP = Students + Communications + Calendar + Scheduling**
+
+This version:
+
+* Removes non-MVP noise
+* Preserves future-proofing without adding weight
+* Is written to guide AI coding tools clearly and consistently
+* Can be pasted directly into `docs/ai_instructions.txt`
+
+---
+
+# Checkmate AI Scheduler
+
+## MVP Architecture, Code, and UI Instructions (Authoritative)
+
+This document defines the **single source of truth** for all AI-generated code for the **MVP version** of Checkmate AI Scheduler.
+
+The MVP scope is intentionally limited to:
+
+* Student Management
+* Scheduling
+* Calendar Visualization
+* Automated Communications
+
+All code must follow this document **exactly** unless explicitly stated otherwise.
+
+---
+
+## 1. Tech Stack (Authoritative)
+
+```
+Backend: Django (Python)
+Frontend: React (TypeScript)
+Database (development): SQLite
+Database (deployment): PostgreSQL
+Automation / glue: Python
+```
+
+---
+
+## 2. MVP Architectural Rules (Non-Negotiable)
+
+```
+- Business logic lives in Django (Python)
+- UI logic lives in React (TypeScript)
+- Scheduling logic lives ONLY in the backend
+- No database logic in the frontend
+- One Django app per business domain
+- Frontend structure mirrors backend domains
+- Django Admin is the primary internal ERP interface
+- Prefer boring, standard patterns over clever abstractions
+```
+
+This is an **ERP-style scheduling system**, not a demo or prototype.
+Correctness, clarity, and maintainability are more important than speed or novelty.
+
+---
+
+## 3. MVP High-Level Repository Structure
+
+```text
+checkmate-driving/
+│
+├── backend/
+│   ├── manage.py
+│   ├── config/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   │
+│   ├── apps/
+│   │   ├── core/             # shared utilities, helpers
+│   │   ├── users/            # staff and instructor accounts
+│   │   ├── orgs/             # single school (future-safe)
+│   │   ├── students/
+│   │   ├── appointments/
+│   │   ├── scheduling/       # pure scheduling logic
+│   │   └── communications/
+│   │
+│   └── scripts/
+│       └── send_reminders.py
+│
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── calendar/
+│   │   └── types/
+│   │
+│   └── package.json
+│
+└── docs/
+    └── ai_instructions.txt
+```
+
+This structure is **intentionally simple and conventional**.
+AI-generated code must not invent new top-level folders or architectural layers.
+
+---
+
+## 4. Backend Apps (MVP Only)
+
+Each backend app represents **one business domain**.
+
+---
+
+### 4.1 `students/` — Student Management
+
+```text
+students/
+├── models.py
+├── serializers.py
+├── views.py
+├── urls.py
+└── admin.py
+```
+
+**Responsibilities**
+
+* Student records
+* Contact information
+* Status (active / completed)
+* Association to appointments
+
+---
+
+### 4.2 `appointments/` — Appointment Database
+
+```text
+appointments/
+├── models.py
+├── serializers.py
+├── views.py
+├── urls.py
+└── admin.py
+```
+
+**Responsibilities**
+
+* Appointment date & time
+* Duration
+* Student
+* Instructor
+* Status (scheduled, completed, canceled)
+
+This app is the **source of truth** for the calendar.
+
+---
+
+### 4.3 `scheduling/` — Scheduling Logic (Pure Python)
+
+```text
+scheduling/
+├── services.py
+└── rules.py
+```
+
+**Responsibilities**
+
+* Conflict detection
+* Availability checks
+* Scheduling validation rules
+
+⚠️ **No models. No views. No UI logic.**
+This app contains pure business logic only.
+
+---
+
+### 4.4 `communications/` — Automated Communications
+
+```text
+communications/
+├── services.py
+├── tasks.py
+└── templates/
+    └── reminder_email.html
+```
+
+**Responsibilities**
+
+* Automated reminder emails
+* Completion notifications (future)
+* Message sending logic
+* Message logging (basic)
+
+---
+
+### 4.5 Supporting Apps (MVP-Required)
+
+#### `users/`
+
+* Staff users
+* Instructor users
+* Authentication
+
+#### `orgs/`
+
+* Single driving school
+* Timezone
+* Business hours
+
+These apps are simple in MVP but **must exist** to avoid future rewrites.
+
+---
+
+## 5. Frontend Structure (React / TypeScript)
+
+The frontend mirrors backend domains and focuses only on MVP functionality.
+
+---
+
+### 5.1 Shared Types (Critical)
+
+```text
+types/
+├── student.ts
+└── appointment.ts
+```
+
+These types **must match backend serializers exactly**.
+
+---
+
+### 5.2 API Layer (Strict Boundary)
+
+```text
+api/
+├── students.ts
+├── appointments.ts
+└── scheduling.ts
+```
+
+Rules:
+
+* Only network calls live here
+* No UI logic
+* No scheduling logic
+
+---
+
+### 5.3 Pages (Screens)
+
+```text
+pages/
+├── StudentsPage.tsx
+└── CalendarPage.tsx
+```
+
+---
+
+### 5.4 Calendar UI
+
+```text
+calendar/
+├── CalendarView.tsx
+└── CalendarEvent.tsx
+```
+
+**Responsibilities**
+
+* Visual representation of appointments
+* Day / week views
+* Read-only in MVP (no drag-and-drop)
+
+---
+
+### 5.5 Forms & Input Components
+
+```text
+components/
+├── StudentForm.tsx
+├── AppointmentForm.tsx
+└── ScheduleForm.tsx
+```
+
+**Responsibilities**
+
+* User input
+* Client-side validation
+* Submitting data to backend APIs
+
+---
+
+## 6. MVP Functional Coverage
+
+| Function            | Backend App      | Frontend Area  |
+| ------------------- | ---------------- | -------------- |
+| Student Management  | `students`       | StudentsPage   |
+| Scheduling          | `scheduling`     | ScheduleForm   |
+| Appointment Storage | `appointments`   | CalendarView   |
+| Calendar View       | `appointments`   | calendar/      |
+| Communications      | `communications` | Backend-driven |
+
+Anything not listed above is **explicitly out of scope for MVP**.
+
+---
+
+## 7. Brand & UI Guidance (Authoritative)
+
+**Product Name:** Checkmate AI Scheduler
+
+**Brand Personality:**
+Modern, calm, intelligent, and professional. The interface should feel **quietly powerful**, optimized for clarity and focus in data-heavy scheduling workflows.
+
+---
+
+### Visual Style Rules
+
+* Dark-first UI
+* High contrast with subtle gradients
+* Rounded corners (8–10px)
+* Smooth hover transitions
+* Clean grid-based layouts
+* No skeuomorphism or decorative textures
+
+---
+
+### Primary Color Palette
+
+**Backgrounds**
+* #0f172a
+* #1e293b
+* #334155
+
+**Primary Brand**
+* #6366f1
+* #4f46e5
+* #818cf8
+
+**Text**
+* #f1f5f9
+* #94a3b8
+* #64748b
+
+**additional colors**
+#f97316
+#06b6d4
+#8b5cf6
+#ec4899
+#14b8a6
+#f43f5e
+#84cc16
+#eab308
+#6366f1
+#22d3ee
+
+---
+
+### UI Rules for AI-Generated Code
+
+```
+- Default to dark theme
+- Use CSS variables for all colors
+- Do not hardcode arbitrary colors
+- Prefer subtle gradients over flat fills
+- Optimize for tables and calendar views
+- Favor clarity over density
+```
+
+---
+
+## 8. Final Instruction to AI Coding Tools
+
+> When generating code for this project:
+>
+> * Follow this document exactly
+> * Stay within MVP scope
+> * Keep files small and modular
+> * Do not introduce non-MVP features
+> * Do not invent new architectural layers
+
+---
+
+If you want, next I can:
+
+* Lock the **exact MVP data models**
+* Define **scheduling conflict rules**
+* Specify **calendar behavior (UX rules)**
+* Write a **Cursor / Copilot system prompt** using this doc
+
+Just tell me the next step.
