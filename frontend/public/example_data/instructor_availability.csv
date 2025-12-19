@@ -1,6 +1,25 @@
 instructor_id,name,day,start,end,location,status
-INS-101,Jake Morrison,Mon,08:00,14:00,North Yard,Available
-INS-102,Samira Ochoa,Tue,12:00,18:00,South Yard,Available
-INS-103,Helena Brooks,Wed,09:00,15:00,East Lot,Out
-INS-104,Dev Patel,Thu,10:00,16:00,North Yard,Available
-INS-105,Pat Reese,Fri,08:00,12:00,Virtual,Available
+INS-101,Jake Morrison,Mon,08:00,16:00,North Yard,Available
+INS-107,Talia Nguyen,Mon,16:00,20:00,North Yard,Available
+INS-102,Samira Ochoa,Tue,08:00,12:00,South Yard,Available
+INS-106,Michelle Noyes,Tue,12:00,16:00,South Yard,Available
+INS-108,Omar Ruiz,Tue,16:00,20:00,South Yard,Available
+INS-103,Helena Brooks,Wed,08:00,16:00,East Lot,Available
+INS-109,Priya Shah,Wed,16:00,20:00,East Lot,Available
+INS-104,Dev Patel,Thu,08:00,12:00,North Yard,Available
+INS-110,Lucas Bennett,Thu,12:00,16:00,North Yard,Available
+INS-111,Riley Chen,Thu,16:00,20:00,North Yard,Available
+INS-105,Pat Reese,Fri,08:00,12:00,East Lot,Available
+INS-112,Morgan Price,Fri,16:00,20:00,East Lot,Available
+INS-101,Jake Morrison,Sat,08:00,12:00,North Yard,Available
+INS-106,Michelle Noyes,Sat,08:00,12:00,South Yard,Available
+INS-113,Isabel Torres,Sat,08:00,12:00,East Lot,Available
+INS-107,Talia Nguyen,Sat,12:00,16:00,North Yard,Available
+INS-108,Omar Ruiz,Sat,12:00,16:00,South Yard,Available
+INS-109,Priya Shah,Sat,16:00,20:00,North Yard,Available
+INS-110,Lucas Bennett,Sat,16:00,20:00,South Yard,Available
+INS-102,Samira Ochoa,Sun,08:00,12:00,North Yard,Available
+INS-114,Noah Kim,Sun,08:00,12:00,South Yard,Available
+INS-103,Helena Brooks,Sun,12:00,16:00,North Yard,Available
+INS-111,Riley Chen,Sun,12:00,16:00,South Yard,Available
+INS-112,Morgan Price,Sun,16:00,20:00,East Lot,Available

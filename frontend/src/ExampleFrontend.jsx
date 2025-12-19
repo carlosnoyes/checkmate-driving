@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 const dataFiles = {
   adminSettings: "/example_data/admin_settings.csv",
@@ -11,7 +11,6 @@ const dataFiles = {
   cars: "/example_data/cars.csv",
   locations: "/example_data/locations.csv",
   teachers: "/example_data/teachers.csv",
-  teacherSchedule: "/example_data/teacher_schedule.csv",
   communications: "/example_data/communications_templates.csv",
   payments: "/example_data/payments.csv",
   crm: "/example_data/crm_contacts.csv",
@@ -149,29 +148,26 @@ const Icons = {
 };
 
 const pages = [
-  { key: "admin", label: "Admin", description: "Configuration & guardrails", icon: "Settings", section: "management" },
-  { key: "students", label: "Students", description: "Student roster & progress", icon: "Users", section: "management" },
-  { key: "instructors", label: "Instructors", description: "Availability & coverage", icon: "UserCheck", section: "management" },
   { key: "calendar", label: "Calendar", description: "Appointments calendar", icon: "Calendar", section: "scheduling" },
   { key: "schedule", label: "Schedule", description: "Quick add scheduling", icon: "Clock", section: "scheduling" },
+  { key: "students", label: "Students", description: "Student roster & progress", icon: "Users", section: "operations" },
   { key: "communications", label: "Communications", description: "Templates & triggers", icon: "Mail", section: "operations" },
   { key: "payments", label: "Payments", description: "Balances & receipts", icon: "CreditCard", section: "operations" },
   { key: "crm", label: "CRM", description: "Leads & partners", icon: "Briefcase", section: "operations" },
-  { key: "metrics", label: "Data Tracking", description: "KPIs & analytics", icon: "BarChart", section: "insights" },
+  { key: "dmv", label: "DMV Compliance", description: "Completion reports", icon: "Shield", section: "operations" },
   { key: "portal", label: "Student Portal", description: "Hours & progress", icon: "GraduationCap", section: "learning" },
   { key: "lms", label: "Learning", description: "Course modules", icon: "BookOpen", section: "learning" },
   { key: "registration", label: "Registration", description: "Class catalog", icon: "ClipboardList", section: "learning" },
+  { key: "admin", label: "Settings", description: "Configuration & guardrails", icon: "Settings", section: "admin" },
+  { key: "metrics", label: "Data Tracking", description: "KPIs & analytics", icon: "BarChart", section: "admin" },
   { key: "payroll", label: "Payroll", description: "Rules & runs", icon: "DollarSign", section: "admin" },
-  { key: "dmv", label: "DMV Compliance", description: "Completion reports", icon: "Shield", section: "admin" },
   { key: "close", label: "Exit Demo", description: "Return to app", icon: "LogOut", section: "system" },
 ];
 
 const sections = [
-  { key: "management", label: "Management" },
   { key: "scheduling", label: "Scheduling" },
   { key: "operations", label: "Operations" },
-  { key: "insights", label: "Insights" },
-  { key: "learning", label: "Learning" },
+  { key: "learning", label: "Student Center" },
   { key: "admin", label: "Administration" },
   { key: "system", label: null },
 ];
@@ -439,12 +435,16 @@ function AdminSetup({ rows }) {
 
 function Students({ rows }) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [trackFilter, setTrackFilter] = useState("all");
-  const [paymentFilter, setPaymentFilter] = useState("all");
   const [localRows, setLocalRows] = useState(rows);
   const [showForm, setShowForm] = useState(false);
+  const [showSearchPopover, setShowSearchPopover] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  // Sorting: { field: string, direction: 'asc' | 'desc' } or null
+  const [sortConfig, setSortConfig] = useState(null);
+  // Column filters: { [field]: Set of excluded values }
+  const [columnFilters, setColumnFilters] = useState({});
+  // Which column's filter popover is open
+  const [activeColumnPopover, setActiveColumnPopover] = useState(null);
   const [draft, setDraft] = useState({
     student_id: "",
     name: "",
@@ -462,43 +462,120 @@ function Students({ rows }) {
     setLocalRows(rows);
   }, [rows]);
 
-  const statusOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.enrollment_status).filter(Boolean))),
-    [rows]
-  );
-  const trackOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.program_track).filter(Boolean))),
-    [rows]
-  );
-  const paymentOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.payment_status).filter(Boolean))),
-    [rows]
-  );
+  // Column configuration with field mapping
+  const columns = useMemo(() => [
+    { key: "student_id", label: "ID", field: "student_id" },
+    { key: "name", label: "Student", field: "name" },
+    { key: "program_track", label: "Program", field: "program_track" },
+    { key: "enrollment_status", label: "Status", field: "enrollment_status" },
+    { key: "next_drive", label: "Next Drive", field: "next_drive" },
+    { key: "assigned_instructor", label: "Instructor", field: "assigned_instructor" },
+    { key: "progress", label: "Progress", field: null }, // computed, no sorting/filtering
+    { key: "payment_status", label: "Payment", field: "payment_status" },
+  ], []);
+
+  // Get unique values for a field (for filter toggles)
+  const getUniqueValues = useCallback((field) => {
+    if (!field) return [];
+    const values = Array.from(new Set(localRows.map((r) => r[field]).filter(Boolean)));
+    return values.sort();
+  }, [localRows]);
+
+  // Check if a field has few enough unique values to show toggles (<=10)
+  const shouldShowToggles = useCallback((field) => {
+    if (!field) return false;
+    return getUniqueValues(field).length <= 10;
+  }, [getUniqueValues]);
+
+  // Toggle a value in column filter
+  const toggleColumnFilterValue = useCallback((field, value) => {
+    setColumnFilters(prev => {
+      const current = prev[field] || new Set();
+      const updated = new Set(current);
+      if (updated.has(value)) {
+        updated.delete(value);
+      } else {
+        updated.add(value);
+      }
+      // If all values are now included, remove the filter entirely
+      if (updated.size === 0) {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [field]: updated };
+    });
+  }, []);
+
+  // Clear filter for a column
+  const clearColumnFilter = useCallback((field) => {
+    setColumnFilters(prev => {
+      const { [field]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  // Handle column header click
+  const handleColumnClick = useCallback((field) => {
+    if (!field) return; // Skip non-sortable columns like Progress
+
+    if (activeColumnPopover === field) {
+      setActiveColumnPopover(null);
+    } else {
+      setActiveColumnPopover(field);
+    }
+  }, [activeColumnPopover]);
+
+  // Handle sort toggle
+  const handleSort = useCallback((field, direction) => {
+    if (sortConfig?.field === field && sortConfig?.direction === direction) {
+      // Clear sort if clicking same sort again
+      setSortConfig(null);
+    } else {
+      setSortConfig({ field, direction });
+    }
+    setActiveColumnPopover(null);
+  }, [sortConfig]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return localRows.filter((row) => {
+    let result = localRows.filter((row) => {
+      // Search filter
       const matchesSearch =
         !term ||
         [row.name, row.student_id, row.assigned_instructor, row.program_track]
           .filter(Boolean)
           .some((val) => val.toLowerCase().includes(term));
 
-      const matchesStatus = statusFilter === "all" || row.enrollment_status === statusFilter;
-      const matchesTrack = trackFilter === "all" || row.program_track === trackFilter;
-      const matchesPayment = paymentFilter === "all" || row.payment_status === paymentFilter;
-      return matchesSearch && matchesStatus && matchesTrack && matchesPayment;
-    });
-  }, [localRows, paymentFilter, search, statusFilter, trackFilter]);
+      // Column filters (excluded values)
+      const matchesColumnFilters = Object.entries(columnFilters).every(([field, excludedSet]) => {
+        const value = row[field];
+        return !excludedSet.has(value);
+      });
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const active = localRows.filter(r => r.enrollment_status === "Active").length;
-    const graduated = localRows.filter(r => r.enrollment_status === "Graduated").length;
-    const pending = localRows.filter(r => r.payment_status === "Pending").length;
-    const totalHours = localRows.reduce((sum, r) => sum + (parseInt(r.hours_logged) || 0), 0);
-    return { active, graduated, pending, totalHours, total: localRows.length };
-  }, [localRows]);
+      return matchesSearch && matchesColumnFilters;
+    });
+
+    // Apply sorting
+    if (sortConfig?.field) {
+      result = [...result].sort((a, b) => {
+        const aVal = a[sortConfig.field] || "";
+        const bVal = b[sortConfig.field] || "";
+
+        // Try numeric comparison first
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+        }
+
+        // String comparison
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return sortConfig.direction === "asc" ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [localRows, search, columnFilters, sortConfig]);
 
   function handleAddStudent(e) {
     e.preventDefault();
@@ -557,86 +634,9 @@ function Students({ rows }) {
     transition: "all 0.2s ease",
   };
 
-  const selectWrapperStyle = {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-      {/* Header - scrolls away */}
-      <div style={{ padding: "0 0 12px 0", flexShrink: 0 }}>
-        <h1 style={{
-          fontSize: 24,
-          fontWeight: 700,
-          color: theme.text,
-          margin: 0,
-          letterSpacing: "-0.02em",
-        }}>
-          Students
-        </h1>
-        <p style={{
-          fontSize: 14,
-          color: theme.textSecondary,
-          margin: "4px 0 0 0",
-        }}>
-          Manage student roster, track progress, and monitor readiness
-        </p>
-      </div>
-
-      {/* Stats Cards - scrolls away */}
-      <div style={{
-        display: "flex",
-        gap: 12,
-        marginBottom: 12,
-        flexShrink: 0,
-      }}>
-        {[
-          { label: "Total", value: stats.total, icon: Icons.Users, color: theme.accent },
-          { label: "Active", value: stats.active, icon: Icons.CheckCircle, color: theme.success },
-          { label: "Graduated", value: stats.graduated, icon: Icons.GraduationCap, color: theme.accentLight },
-          { label: "Pending Pay", value: stats.pending, icon: Icons.AlertCircle, color: theme.warning },
-          { label: "Hours", value: stats.totalHours, icon: Icons.Clock, color: theme.info },
-        ].map((stat, idx) => (
-          <div
-            key={idx}
-            style={{
-              background: theme.surface,
-              border: `1px solid ${theme.border}`,
-              borderRadius: 12,
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flex: 1,
-            }}
-          >
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: `${stat.color}15`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: stat.color,
-              flexShrink: 0,
-            }}>
-              <stat.icon />
-            </div>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, lineHeight: 1 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: 11, color: theme.textSecondary }}>
-                {stat.label}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Table Container - sticky behavior: sticks to top when scrolled */}
       <div style={{
         position: "sticky",
@@ -647,113 +647,12 @@ function Students({ rows }) {
         background: theme.bg,
         zIndex: 10,
       }}>
-          {/* Search Bar + Filters + Add Button - stays at top when scrolled */}
-          <div style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            background: theme.surface,
-            border: `1px solid ${theme.border}`,
-            borderRadius: "12px 12px 0 0",
-            padding: "8px 12px",
-            flexShrink: 0,
-          }}>
-            <div style={{ position: "relative", width: 200 }}>
-              <div style={{
-                position: "absolute",
-                left: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: theme.textMuted,
-                pointerEvents: "none",
-              }}>
-                <Icons.Search />
-              </div>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
-                style={{
-                  ...inputStyle,
-                  padding: "8px 12px 8px 36px",
-                  background: theme.panel,
-                  fontSize: 13,
-                }}
-              />
-            </div>
-
-            <div style={{ height: 20, width: 1, background: theme.border }} />
-
-            {[
-              { label: "Status", value: statusFilter, onChange: setStatusFilter, options: statusOptions },
-              { label: "Track", value: trackFilter, onChange: setTrackFilter, options: trackOptions },
-              { label: "Payment", value: paymentFilter, onChange: setPaymentFilter, options: paymentOptions },
-            ].map((config, idx) => (
-              <div key={idx} style={selectWrapperStyle}>
-                <select
-                  value={config.value}
-                  onChange={(e) => config.onChange(e.target.value)}
-                  style={{
-                    ...inputStyle,
-                    padding: "8px 28px 8px 10px",
-                    cursor: "pointer",
-                    background: theme.panel,
-                    minWidth: 110,
-                    appearance: "none",
-                    fontSize: 13,
-                  }}
-                >
-                  <option value="all">{config.label}</option>
-                  {config.options.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <div style={{
-                  position: "absolute",
-                  right: 8,
-                  pointerEvents: "none",
-                  color: theme.textMuted,
-                }}>
-                  <Icons.ChevronDown />
-                </div>
-              </div>
-            ))}
-
-            <span style={{ fontSize: 12, color: theme.textMuted, marginLeft: 4 }}>
-              {filteredRows.length}/{localRows.length}
-            </span>
-
-            <button
-              onClick={() => setShowForm(true)}
-              style={{
-                background: theme.gradient,
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 14px",
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginLeft: "auto",
-                boxShadow: "0 2px 8px rgba(99, 102, 241, 0.3)",
-              }}
-            >
-              <Icons.Plus />
-              Add Student
-            </button>
-          </div>
-
           {/* Students Table - fills remaining space */}
           <div style={{
             flex: 1,
             background: theme.surface,
-            borderLeft: `1px solid ${theme.border}`,
-            borderRight: `1px solid ${theme.border}`,
-            borderBottom: `1px solid ${theme.border}`,
-            borderRadius: "0 0 12px 12px",
+            border: `1px solid ${theme.border}`,
+            borderRadius: "12px",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -762,24 +661,317 @@ function Students({ rows }) {
         {/* Table Header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1.5fr 1.2fr 100px 120px 1fr 140px 100px",
-          padding: "14px 20px",
+          gridTemplateColumns: "70px 1.5fr 1.2fr 100px 120px 1fr 140px 100px",
+          padding: "10px 20px",
           background: theme.panel,
           borderBottom: `1px solid ${theme.border}`,
           gap: 16,
+          alignItems: "center",
         }}>
-          {["ID", "Student", "Program", "Status", "Next Drive", "Instructor", "Progress", "Payment"].map((header) => (
-            <div key={header} style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: theme.textMuted,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}>
-              {header}
+          {/* Action Icons Column - Add & Search */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {/* Add Student Button */}
+            <button
+              onClick={() => setShowForm(true)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: theme.gradient,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                boxShadow: "0 2px 6px rgba(99, 102, 241, 0.3)",
+              }}
+              title="Add Student"
+            >
+              <Icons.Plus />
+            </button>
+
+            {/* Search Button */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowSearchPopover(!showSearchPopover)}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  background: showSearchPopover || search ? theme.surface : "transparent",
+                  border: `1px solid ${showSearchPopover || search ? theme.accent : theme.border}`,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: showSearchPopover || search ? theme.accent : theme.textMuted,
+                  transition: "all 0.15s ease",
+                }}
+                title="Search"
+              >
+                <Icons.Search />
+              </button>
+              {/* Search Popover */}
+              {showSearchPopover && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  background: theme.panel,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 8,
+                  padding: 8,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  zIndex: 100,
+                  minWidth: 220,
+                }}>
+                  <input
+                    autoFocus
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search students..."
+                    style={{
+                      ...inputStyle,
+                      padding: "8px 12px",
+                      background: theme.surface,
+                      fontSize: 13,
+                      width: "100%",
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setShowSearchPopover(false);
+                    }}
+                  />
+                  {search && (
+                    <button
+                      onClick={() => {
+                        setSearch("");
+                        setShowSearchPopover(false);
+                      }}
+                      style={{
+                        marginTop: 8,
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        background: theme.surface,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: 6,
+                        color: theme.textSecondary,
+                        cursor: "pointer",
+                        width: "100%",
+                      }}
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
+          </div>
+
+          {/* Interactive Column Headers */}
+          {columns.slice(1).map((col, colIndex) => {
+            const isSorted = sortConfig?.field === col.field;
+            const hasFilter = col.field && columnFilters[col.field]?.size > 0;
+            const isActive = isSorted || hasFilter;
+            const isPopoverOpen = activeColumnPopover === col.field;
+            const uniqueValues = col.field ? getUniqueValues(col.field) : [];
+            const showToggles = shouldShowToggles(col.field);
+            // Position popover to the right for the last 3 columns to prevent overflow
+            const isRightAligned = colIndex >= columns.length - 4;
+
+            return (
+              <div key={col.key} style={{ position: "relative" }}>
+                <button
+                  onClick={() => handleColumnClick(col.field)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "4px 0",
+                    cursor: col.field ? "pointer" : "default",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    width: "100%",
+                  }}
+                  disabled={!col.field}
+                >
+                  <span style={{
+                    fontSize: 12,
+                    fontWeight: isActive ? 700 : 600,
+                    color: isActive ? theme.accent : theme.textMuted,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    transition: "all 0.15s ease",
+                  }}>
+                    {col.label}
+                  </span>
+                  {/* Sort indicator */}
+                  {isSorted && (
+                    <span style={{ color: theme.accent, fontSize: 10 }}>
+                      {sortConfig.direction === "asc" ? "▲" : "▼"}
+                    </span>
+                  )}
+                  {/* Filter indicator */}
+                  {hasFilter && (
+                    <span style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: theme.accent,
+                      flexShrink: 0,
+                    }} />
+                  )}
+                </button>
+
+                {/* Column Popover */}
+                {isPopoverOpen && col.field && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 8px)",
+                      ...(isRightAligned ? { right: 0 } : { left: 0 }),
+                      background: theme.panel,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: 8,
+                      padding: 12,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                      zIndex: 100,
+                      minWidth: 180,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Sort Options */}
+                    <div style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: "uppercase", marginBottom: 8 }}>
+                      Sort
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: showToggles ? 12 : 0 }}>
+                      <button
+                        onClick={() => handleSort(col.field, "asc")}
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          background: sortConfig?.field === col.field && sortConfig?.direction === "asc" ? theme.accentGlow : theme.surface,
+                          border: `1px solid ${sortConfig?.field === col.field && sortConfig?.direction === "asc" ? theme.accent : theme.border}`,
+                          borderRadius: 6,
+                          color: sortConfig?.field === col.field && sortConfig?.direction === "asc" ? theme.accent : theme.textSecondary,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>▲</span> A → Z
+                      </button>
+                      <button
+                        onClick={() => handleSort(col.field, "desc")}
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          background: sortConfig?.field === col.field && sortConfig?.direction === "desc" ? theme.accentGlow : theme.surface,
+                          border: `1px solid ${sortConfig?.field === col.field && sortConfig?.direction === "desc" ? theme.accent : theme.border}`,
+                          borderRadius: 6,
+                          color: sortConfig?.field === col.field && sortConfig?.direction === "desc" ? theme.accent : theme.textSecondary,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>▼</span> Z → A
+                      </button>
+                    </div>
+
+                    {/* Filter Toggles (only if <=10 unique values) */}
+                    {showToggles && uniqueValues.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: "uppercase", marginBottom: 8 }}>
+                          Show
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 200, overflowY: "auto" }}>
+                          {uniqueValues.map((val) => {
+                            const isExcluded = columnFilters[col.field]?.has(val);
+                            return (
+                              <button
+                                key={val}
+                                onClick={() => toggleColumnFilterValue(col.field, val)}
+                                style={{
+                                  padding: "6px 10px",
+                                  fontSize: 12,
+                                  background: isExcluded ? theme.surface : theme.accentGlow,
+                                  border: `1px solid ${isExcluded ? theme.border : theme.accent}`,
+                                  borderRadius: 6,
+                                  color: isExcluded ? theme.textMuted : theme.accent,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  opacity: isExcluded ? 0.6 : 1,
+                                  textDecoration: isExcluded ? "line-through" : "none",
+                                }}
+                              >
+                                <span style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 3,
+                                  border: `1px solid ${isExcluded ? theme.border : theme.accent}`,
+                                  background: isExcluded ? "transparent" : theme.accent,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 10,
+                                  color: "#fff",
+                                }}>
+                                  {!isExcluded && "✓"}
+                                </span>
+                                {val}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {hasFilter && (
+                          <button
+                            onClick={() => clearColumnFilter(col.field)}
+                            style={{
+                              marginTop: 8,
+                              padding: "6px 10px",
+                              fontSize: 12,
+                              background: theme.surface,
+                              border: `1px solid ${theme.border}`,
+                              borderRadius: 6,
+                              color: theme.textSecondary,
+                              cursor: "pointer",
+                              width: "100%",
+                            }}
+                          >
+                            Show all
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Click outside to close popovers */}
+        {(activeColumnPopover || showSearchPopover) && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 50,
+            }}
+            onClick={() => {
+              setActiveColumnPopover(null);
+              setShowSearchPopover(false);
+            }}
+          />
+        )}
 
         {/* Table Body */}
         <div style={{ flex: 1, overflow: "auto" }}>
@@ -794,7 +986,7 @@ function Students({ rows }) {
                 onClick={() => setSelectedStudent(row)}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1.5fr 1.2fr 100px 120px 1fr 140px 100px",
+                  gridTemplateColumns: "70px 1.5fr 1.2fr 100px 120px 1fr 140px 100px",
                   padding: "16px 20px",
                   borderBottom: `1px solid ${theme.borderLight}`,
                   gap: 16,
@@ -806,7 +998,7 @@ function Students({ rows }) {
                 onMouseEnter={(e) => e.currentTarget.style.background = theme.surfaceHover}
                 onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)"}
               >
-                <div style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "monospace" }}>
+                <div style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "monospace" }}>
                   {row.student_id}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1305,6 +1497,54 @@ const carColors = {
   "Car 5": { bg: "#8b5cf6", text: "#fff" },
 };
 
+const legendPalette = [
+  "#4e79a7",
+  "#f28e2b",
+  "#e15759",
+  "#76b7b2",
+  "#59a14f",
+  "#edc949",
+  "#af7aa1",
+  "#ff9da7",
+  "#9c755f",
+  "#bab0ab",
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
+function getReadableTextColor(hex) {
+  const cleaned = hex.replace("#", "");
+  const r = parseInt(cleaned.slice(0, 2), 16);
+  const g = parseInt(cleaned.slice(2, 4), 16);
+  const b = parseInt(cleaned.slice(4, 6), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.6 ? "#000" : "#fff";
+}
+
+function buildColorMap(names, baseMap) {
+  const map = { ...baseMap };
+  const used = new Set(Object.values(baseMap).map((color) => color.bg));
+  const available = legendPalette.filter((color) => !used.has(color));
+  let idx = 0;
+
+  (names || []).forEach((name) => {
+    if (map[name]) return;
+    const bg = available[idx % available.length] || legendPalette[idx % legendPalette.length];
+    map[name] = { bg, text: getReadableTextColor(bg) };
+    idx += 1;
+  });
+
+  return map;
+}
+
 // Parse time string to minutes from midnight
 function parseTimeToMinutes(timeStr) {
   if (!timeStr) return 0;
@@ -1339,7 +1579,7 @@ function parseDateString(dateStr) {
 
 function CalendarView({
   appointments,
-  schedule = [],
+  instructors = [],
   classKeys = [],
   locations = [],
   students = [],
@@ -1380,16 +1620,37 @@ function CalendarView({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const availabilitySchedule = useMemo(() => {
+    const locationToCar = {
+      "North Yard": "Car 1",
+      "South Yard": "Car 2",
+      "East Lot": "Car 3",
+    };
+    return (instructors || [])
+      .filter((row) => {
+        const status = (row.status || "").toLowerCase();
+        return status === "" || status === "available";
+      })
+      .map((row) => ({
+        day_of_week: row.day,
+        start_time: row.start,
+        end_time: row.end,
+        car_id: locationToCar[row.location] || "",
+        teacher_name: row.name || "",
+      }))
+      .filter((row) => row.day_of_week && row.start_time && row.end_time);
+  }, [instructors]);
+
   const scheduleByDay = useMemo(() => {
     const map = {};
-    (schedule || []).forEach((row) => {
+    (availabilitySchedule || []).forEach((row) => {
       const day = row.day_of_week;
       if (!day) return;
       if (!map[day]) map[day] = [];
       map[day].push(row);
     });
     return map;
-  }, [schedule]);
+  }, [availabilitySchedule]);
 
   // Get all days in current month
   const monthDays = useMemo(() => {
@@ -1439,7 +1700,7 @@ function CalendarView({
       if (apt["Car ID"]) cars.add(apt["Car ID"]);
       if (apt["Teacher Name"]) teachers.add(apt["Teacher Name"]);
     });
-    (schedule || []).forEach((row) => {
+    (availabilitySchedule || []).forEach((row) => {
       if (row.car_id) cars.add(row.car_id);
       if (row.teacher_name) teachers.add(row.teacher_name);
     });
@@ -1447,7 +1708,17 @@ function CalendarView({
       uniqueCars: Array.from(cars).sort(),
       uniqueTeachers: Array.from(teachers).sort(),
     };
-  }, [localAppointments, schedule]);
+  }, [localAppointments, availabilitySchedule]);
+
+  const teacherColorMap = useMemo(
+    () => buildColorMap(uniqueTeachers, teacherColors),
+    [uniqueTeachers]
+  );
+
+  const carColorMap = useMemo(
+    () => buildColorMap(uniqueCars, carColors),
+    [uniqueCars]
+  );
 
   const toggleColumnHidden = (name) => {
     setHiddenColumns((prev) => {
@@ -1459,15 +1730,9 @@ function CalendarView({
     });
   };
 
-  const visibleCars = useMemo(
-    () => uniqueCars.filter((car) => !hiddenColumns.car?.[car]),
-    [uniqueCars, hiddenColumns]
-  );
+  const visibleCars = useMemo(() => uniqueCars, [uniqueCars]);
 
-  const visibleTeachers = useMemo(
-    () => uniqueTeachers.filter((teacher) => !hiddenColumns.teacher?.[teacher]),
-    [uniqueTeachers, hiddenColumns]
-  );
+  const visibleTeachers = useMemo(() => uniqueTeachers, [uniqueTeachers]);
 
   const getClassLength = (classId) => {
     const found = (classKeys || []).find((row) => row["Class Key"] === classId);
@@ -1556,6 +1821,13 @@ function CalendarView({
     setSelectedAppointment(null);
   };
 
+  const clearHoverIfNotAppointment = (event) => {
+    const target = event.target;
+    if (!target || !target.closest || !target.closest("[data-apt-hover='true']")) {
+      setHoveredApt(null);
+    }
+  };
+
   // Format date to match CSV format
   const formatDateKey = (date) => {
     return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
@@ -1592,35 +1864,35 @@ function CalendarView({
   }, [monthDays]);
 
   // UI constants
-  const bottomBarHeight = 36;
+  const bottomBarHeight = 56;
   const dayHeaderHeight = 24;
-  const legendMap = viewMode === "car" ? carColors : teacherColors;
+  const legendMap = viewMode === "car" ? teacherColorMap : carColorMap;
 
   // Day detail view
   const DayDetailView = ({ date, onClose }) => {
-    const dayAppts = getDayAppointments(date);
-    const groupBy = viewMode === "car" ? "Car ID" : "Teacher Name";
-    const colorBy = groupBy;
-    const colorMap = viewMode === "car" ? carColors : teacherColors;
-    const availabilityColorMap = viewMode === "car" ? carColors : teacherColors;
-    const hiddenColumnMap = hiddenColumns[viewMode] || {};
-    const filteredDayAppts = dayAppts.filter(
-      (apt) => !hiddenColumnMap[apt[groupBy]]
-    );
+      const dayAppts = getDayAppointments(date);
+      const groupBy = viewMode === "car" ? "Car ID" : "Teacher Name";
+      const colorBy = viewMode === "car" ? "Teacher Name" : "Car ID";
+      const colorMap = viewMode === "car" ? teacherColorMap : carColorMap;
+      const availabilityColorMap = viewMode === "car" ? teacherColorMap : carColorMap;
+      const hiddenLegendMap = hiddenColumns[viewMode] || {};
+      const filteredDayAppts = dayAppts.filter(
+        (apt) => !hiddenLegendMap[apt[colorBy]]
+      );
 
     // Group appointments
     const grouped = {};
     const columns = viewMode === "car" ? visibleCars : visibleTeachers;
     const dayKey = dayNames[date.getDay()];
-    const daySchedule = scheduleByDay[dayKey] || [];
+                  const daySchedule = scheduleByDay[dayKey] || [];
 
     const columnAvailability = {};
     columns.forEach(col => {
       grouped[col] = filteredDayAppts.filter(apt => apt[groupBy] === col);
-      columnAvailability[col] = daySchedule.filter((slot) =>
-        viewMode === "car" ? slot.car_id === col : slot.teacher_name === col
-      );
-    });
+        columnAvailability[col] = daySchedule.filter((slot) =>
+          viewMode === "car" ? slot.car_id === col : slot.teacher_name === col
+        );
+      });
 
     // Filter to only columns with appointments or availability
     const activeColumns = columns.filter(col => grouped[col].length > 0 || columnAvailability[col].length > 0);
@@ -1650,6 +1922,7 @@ function CalendarView({
       }} onClick={onClose}>
         <div
           onClick={e => e.stopPropagation()}
+          onMouseMove={clearHoverIfNotAppointment}
           style={{
             background: theme.panel,
             border: `1px solid ${theme.border}`,
@@ -1734,13 +2007,14 @@ function CalendarView({
             padding: "12px 20px",
             borderBottom: `1px solid ${theme.border}`,
             display: "flex",
+            alignItems: "center",
             gap: 16,
             flexWrap: "wrap",
             background: theme.surface,
           }}>
-            <span style={{ fontSize: 12, color: theme.textMuted, marginRight: 8 }}>
-              {viewMode === "car" ? "Cars:" : "Teachers:"}
-            </span>
+              <span style={{ fontSize: 12, color: theme.textMuted }}>
+                {viewMode === "car" ? "Instructors:" : "Cars:"}
+              </span>
             {Object.entries(legendMap).map(([name, colors]) => (
               <button
                 key={name}
@@ -1806,7 +2080,10 @@ function CalendarView({
                   overflow: "hidden",
                 }}>
                   {activeColumns.map(column => {
-                    const availabilitySlots = columnAvailability[column] || [];
+                    const availabilitySlots = (columnAvailability[column] || []).filter((slot) => {
+                      const key = viewMode === "car" ? slot.teacher_name : slot.car_id;
+                      return !hiddenLegendMap[key];
+                    });
 
                     return (
                     <div key={column} style={{
@@ -1852,12 +2129,9 @@ function CalendarView({
                           const slotEnd = parseTimeToMinutes24(slot.end_time);
                           return startMinutes >= slotStart && startMinutes < slotEnd;
                         });
-                        const startTime = matchedSlot
-                          ? matchedSlot.start_time
-                          : toTimeInputFromMinutes(startMinutes);
-                        const endTime = matchedSlot
-                          ? matchedSlot.end_time
-                          : addMinutesToTimeInput(startTime, 120);
+                        // Always use the clicked time for start, not the slot's start time
+                        const startTime = toTimeInputFromMinutes(startMinutes);
+                        const endTime = addMinutesToTimeInput(startTime, 120);
                         const carId = viewMode === "car" ? column : (matchedSlot ? matchedSlot.car_id : "");
                         const teacherName = viewMode === "teacher" ? column : (matchedSlot ? matchedSlot.teacher_name : "");
                         setNewAppointmentDraft(
@@ -1884,7 +2158,7 @@ function CalendarView({
                           const endMin = parseTimeToMinutes24(slot.end_time);
                           const top = ((startMin - startHour * 60) / 60) * hourHeight;
                           const height = ((endMin - startMin) / 60) * hourHeight;
-                          const availabilityKey = viewMode === "car" ? slot.car_id : slot.teacher_name;
+                          const availabilityKey = viewMode === "car" ? slot.teacher_name : slot.car_id;
                           const availabilityColors = availabilityColorMap[availabilityKey] || { bg: theme.accent };
                           if (height <= 0) return null;
                           return (
@@ -1918,6 +2192,7 @@ function CalendarView({
                           return (
                             <div
                               key={idx}
+                              data-apt-hover="true"
                               onMouseEnter={(e) => {
                                 e.stopPropagation();
                                 setHoveredApt(apt);
@@ -2625,7 +2900,12 @@ function CalendarView({
   };
 
   return (
-    <div ref={calendarRef} style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div
+      ref={calendarRef}
+      onMouseLeave={() => setHoveredApt(null)}
+      onMouseMove={clearHoverIfNotAppointment}
+      style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}
+    >
       {/* Day headers */}
       <div style={{
         display: "grid",
@@ -2675,15 +2955,15 @@ function CalendarView({
                 const dateKey = formatDateKey(dayInfo.date);
                 const dayAppts = appointmentsByDate[dateKey] || [];
                 const isToday = dayInfo.date.toDateString() === new Date().toDateString();
-                const groupBy = viewMode === "car" ? "Car ID" : "Teacher Name";
-                const colorBy = groupBy;
-                const colorMap = viewMode === "car" ? carColors : teacherColors;
-                const availabilityColorMap = viewMode === "car" ? carColors : teacherColors;
+                  const groupBy = viewMode === "car" ? "Car ID" : "Teacher Name";
+                  const colorBy = viewMode === "car" ? "Teacher Name" : "Car ID";
+                  const colorMap = viewMode === "car" ? teacherColorMap : carColorMap;
+                  const availabilityColorMap = viewMode === "car" ? teacherColorMap : carColorMap;
                 const allColumns = viewMode === "car" ? visibleCars : visibleTeachers;
                 const dayKey = dayNames[dayInfo.date.getDay()];
                 const daySchedule = scheduleByDay[dayKey] || [];
-                const hiddenColumnMap = hiddenColumns[viewMode] || {};
-                const filteredDayAppts = dayAppts.filter((apt) => !hiddenColumnMap[apt[groupBy]]);
+                  const hiddenLegendMap = hiddenColumns[viewMode] || {};
+                  const filteredDayAppts = dayAppts.filter((apt) => !hiddenLegendMap[apt[colorBy]]);
 
                 // Group appointments by car/teacher
                 const grouped = {};
@@ -2768,7 +3048,10 @@ function CalendarView({
                           const columnAppts = grouped[column] || [];
                           const availabilitySlots = daySchedule.filter((slot) =>
                             viewMode === "car" ? slot.car_id === column : slot.teacher_name === column
-                          );
+                          ).filter((slot) => {
+                            const key = viewMode === "car" ? slot.teacher_name : slot.car_id;
+                            return !hiddenLegendMap[key];
+                          });
                           const hasAvailability = availabilitySlots.length > 0;
 
                           return (
@@ -2789,7 +3072,7 @@ function CalendarView({
                                 const endMin = parseTimeToMinutes24(slot.end_time);
                                 const topPercent = ((startMin - startHour * 60) / (totalHours * 60)) * 100;
                                 const heightPercent = ((endMin - startMin) / (totalHours * 60)) * 100;
-                                const availabilityKey = viewMode === "car" ? slot.car_id : slot.teacher_name;
+                                const availabilityKey = viewMode === "car" ? slot.teacher_name : slot.car_id;
                                 const availabilityColors = availabilityColorMap[availabilityKey] || { bg: theme.accent };
                                 if (heightPercent <= 0) return null;
                                 return (
@@ -2824,6 +3107,7 @@ function CalendarView({
                                 return (
                                   <div
                                     key={aptIdx}
+                                    data-apt-hover="true"
                                     onMouseEnter={(e) => {
                                       e.stopPropagation();
                                       setHoveredApt(apt);
@@ -2935,18 +3219,22 @@ function CalendarView({
           display: "flex",
           alignItems: "center",
           gap: 10,
+          rowGap: 6,
           flex: 1,
           justifyContent: "center",
-          overflow: "hidden",
+          flexWrap: "wrap",
         }}>
           <span style={{ fontSize: 11, color: theme.textMuted, whiteSpace: "nowrap" }}>
-            {viewMode === "car" ? "Cars:" : "Teachers:"}
+            {viewMode === "car" ? "Instructors:" : "Cars:"}
           </span>
           <div style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
-            overflow: "hidden",
+            rowGap: 6,
+            flexWrap: "wrap",
+            justifyContent: "center",
+            maxWidth: "100%",
           }}>
             {Object.entries(legendMap).map(([name, colors]) => (
               <button
@@ -3070,6 +3358,13 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [localAppointments, setLocalAppointments] = useState(appointments || []);
 
+  // Search, sort, and filter state
+  const [search, setSearch] = useState("");
+  const [showSearchPopover, setShowSearchPopover] = useState(false);
+  const [sortConfig, setSortConfig] = useState(null);
+  const [columnFilters, setColumnFilters] = useState({});
+  const [activeColumnPopover, setActiveColumnPopover] = useState(null);
+
   const [draft, setDraft] = useState({
     date: new Date().toISOString().split("T")[0],
     startTime: "09:00",
@@ -3102,7 +3397,7 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
     return calculateEndTime(draft.startTime, classLength, draft.pudo);
   }, [draft.startTime, draft.classId, draft.pudo, classKeys]);
 
-  // Filter students based on search
+  // Filter students based on search (for form dropdown)
   const filteredStudents = useMemo(() => {
     if (!studentSearch.trim()) return students || [];
     const term = studentSearch.toLowerCase();
@@ -3111,6 +3406,120 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
       s.student_id?.toLowerCase().includes(term)
     );
   }, [students, studentSearch]);
+
+  // Column configuration for the appointments table
+  const columns = useMemo(() => [
+    { key: "APT-ID", label: "APT-ID", field: "APT-ID" },
+    { key: "Date", label: "Date", field: "Date" },
+    { key: "Start Time", label: "Start", field: "Start Time" },
+    { key: "End Time", label: "End", field: "End Time" },
+    { key: "Car ID", label: "Car", field: "Car ID" },
+    { key: "Location", label: "Loc", field: "Location" },
+    { key: "Teacher Name", label: "Teacher", field: "Teacher Name" },
+    { key: "Student Name", label: "Student", field: "Student Name" },
+    { key: "Class ID", label: "Class", field: "Class ID" },
+    { key: "PUDO", label: "PUDO", field: "PUDO" },
+    { key: "Notes", label: "Notes", field: "Notes" },
+  ], []);
+
+  // Get unique values for a field (for filter toggles)
+  const getUniqueValues = useCallback((field) => {
+    if (!field) return [];
+    const values = Array.from(new Set(localAppointments.map((r) => r[field]).filter(Boolean)));
+    return values.sort();
+  }, [localAppointments]);
+
+  // Check if a field has few enough unique values to show toggles (<=10)
+  const shouldShowToggles = useCallback((field) => {
+    if (!field) return false;
+    return getUniqueValues(field).length <= 10;
+  }, [getUniqueValues]);
+
+  // Toggle a value in column filter
+  const toggleColumnFilterValue = useCallback((field, value) => {
+    setColumnFilters(prev => {
+      const current = prev[field] || new Set();
+      const updated = new Set(current);
+      if (updated.has(value)) {
+        updated.delete(value);
+      } else {
+        updated.add(value);
+      }
+      if (updated.size === 0) {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [field]: updated };
+    });
+  }, []);
+
+  // Clear filter for a column
+  const clearColumnFilter = useCallback((field) => {
+    setColumnFilters(prev => {
+      const { [field]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  // Handle column header click
+  const handleColumnClick = useCallback((field) => {
+    if (!field) return;
+    if (activeColumnPopover === field) {
+      setActiveColumnPopover(null);
+    } else {
+      setActiveColumnPopover(field);
+    }
+  }, [activeColumnPopover]);
+
+  // Handle sort toggle
+  const handleSort = useCallback((field, direction) => {
+    if (sortConfig?.field === field && sortConfig?.direction === direction) {
+      setSortConfig(null);
+    } else {
+      setSortConfig({ field, direction });
+    }
+    setActiveColumnPopover(null);
+  }, [sortConfig]);
+
+  // Filtered and sorted appointments
+  const filteredAppointments = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    let result = localAppointments.filter((row) => {
+      // Search filter
+      const matchesSearch =
+        !term ||
+        [row["APT-ID"], row.Date, row["Teacher Name"], row["Student Name"], row["Class ID"], row.Notes]
+          .filter(Boolean)
+          .some((val) => String(val).toLowerCase().includes(term));
+
+      // Column filters (excluded values)
+      const matchesColumnFilters = Object.entries(columnFilters).every(([field, excludedSet]) => {
+        const value = row[field];
+        return !excludedSet.has(value);
+      });
+
+      return matchesSearch && matchesColumnFilters;
+    });
+
+    // Apply sorting
+    if (sortConfig?.field) {
+      result = [...result].sort((a, b) => {
+        const aVal = a[sortConfig.field] || "";
+        const bVal = b[sortConfig.field] || "";
+
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+        }
+
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return sortConfig.direction === "asc" ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [localAppointments, search, columnFilters, sortConfig]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -3178,98 +3587,7 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-      {/* Header */}
-      <div style={{ padding: "0 0 12px 0", flexShrink: 0 }}>
-        <h1 style={{
-          fontSize: 24,
-          fontWeight: 700,
-          color: theme.text,
-          margin: 0,
-          letterSpacing: "-0.02em",
-        }}>
-          Schedule
-        </h1>
-        <p style={{
-          fontSize: 14,
-          color: theme.textSecondary,
-          margin: "4px 0 0 0",
-        }}>
-          Manage appointments and schedule new sessions
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div style={{
-        display: "flex",
-        gap: 12,
-        marginBottom: 12,
-        flexShrink: 0,
-      }}>
-        {[
-          { label: "Total", value: localAppointments.length, icon: Icons.Calendar, color: theme.accent },
-          { label: "Today", value: localAppointments.filter(a => a.Date === new Date().toLocaleDateString("en-US")).length, icon: Icons.Clock, color: theme.success },
-          { label: "Canceled", value: localAppointments.filter(a => a.Canceled === "TRUE").length, icon: Icons.X, color: theme.danger },
-          { label: "No-Shows", value: localAppointments.filter(a => a["No-Show"] === "TRUE").length, icon: Icons.AlertCircle, color: theme.warning },
-        ].map((stat, idx) => (
-          <div
-            key={idx}
-            style={{
-              background: theme.surface,
-              border: `1px solid ${theme.border}`,
-              borderRadius: 12,
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flex: 1,
-            }}
-          >
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: `${stat.color}15`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: stat.color,
-              flexShrink: 0,
-            }}>
-              <stat.icon />
-            </div>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, lineHeight: 1 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: 11, color: theme.textSecondary }}>
-                {stat.label}
-              </div>
-            </div>
-          </div>
-        ))}
-        <button
-          onClick={() => setShowForm(true)}
-          style={{
-            background: theme.gradient,
-            color: "#fff",
-            border: "none",
-            borderRadius: 12,
-            padding: "10px 20px",
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: "0 2px 8px rgba(99, 102, 241, 0.3)",
-          }}
-        >
-          <Icons.Plus />
-          New Appointment
-        </button>
-      </div>
-
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Appointments Table */}
       <div style={{
         flex: 1,
@@ -3283,28 +3601,321 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
         {/* Table Header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "80px 100px 90px 90px 80px 60px 140px 140px 80px 60px 1fr",
-          padding: "14px 20px",
+          gridTemplateColumns: "70px 90px 70px 70px 70px 50px 120px 120px 70px 50px 1fr",
+          padding: "10px 20px",
           background: theme.panel,
           borderBottom: `1px solid ${theme.border}`,
-          gap: 12,
+          gap: 8,
+          alignItems: "center",
         }}>
-          {["APT-ID", "Date", "Start", "End", "Car", "Loc", "Teacher", "Student", "Class", "PUDO", "Notes"].map((header) => (
-            <div key={header} style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: theme.textMuted,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}>
-              {header}
+          {/* Action Icons replacing APT-ID header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {/* Add Appointment Button */}
+            <button
+              onClick={() => setShowForm(true)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: theme.gradient,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                boxShadow: "0 2px 6px rgba(99, 102, 241, 0.3)",
+              }}
+              title="New Appointment"
+            >
+              <Icons.Plus />
+            </button>
+
+            {/* Search Button */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowSearchPopover(!showSearchPopover)}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  background: showSearchPopover || search ? theme.surface : "transparent",
+                  border: `1px solid ${showSearchPopover || search ? theme.accent : theme.border}`,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: showSearchPopover || search ? theme.accent : theme.textMuted,
+                  transition: "all 0.15s ease",
+                }}
+                title="Search"
+              >
+                <Icons.Search />
+              </button>
+              {/* Search Popover */}
+              {showSearchPopover && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  background: theme.panel,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 8,
+                  padding: 8,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  zIndex: 100,
+                  minWidth: 220,
+                }}>
+                  <input
+                    autoFocus
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search appointments..."
+                    style={{
+                      ...inputStyle,
+                      padding: "8px 12px",
+                      background: theme.surface,
+                      fontSize: 13,
+                      width: "100%",
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setShowSearchPopover(false);
+                    }}
+                  />
+                  {search && (
+                    <button
+                      onClick={() => {
+                        setSearch("");
+                        setShowSearchPopover(false);
+                      }}
+                      style={{
+                        marginTop: 8,
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        background: theme.surface,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: 6,
+                        color: theme.textSecondary,
+                        cursor: "pointer",
+                        width: "100%",
+                      }}
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
+          </div>
+
+          {/* Interactive Column Headers (skip APT-ID, icons replace it) */}
+          {columns.slice(1).map((col, colIndex) => {
+            const isSorted = sortConfig?.field === col.field;
+            const hasFilter = col.field && columnFilters[col.field]?.size > 0;
+            const isActive = isSorted || hasFilter;
+            const isPopoverOpen = activeColumnPopover === col.field;
+            const uniqueValues = col.field ? getUniqueValues(col.field) : [];
+            const showToggles = shouldShowToggles(col.field);
+            // Position popover to the right for the last 4 columns to prevent overflow
+            const isRightAligned = colIndex >= columns.length - 4;
+
+            return (
+              <div key={col.key} style={{ position: "relative" }}>
+                <button
+                  onClick={() => handleColumnClick(col.field)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "4px 0",
+                    cursor: col.field ? "pointer" : "default",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    width: "100%",
+                  }}
+                  disabled={!col.field}
+                >
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: isActive ? 700 : 600,
+                    color: isActive ? theme.accent : theme.textMuted,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    transition: "all 0.15s ease",
+                  }}>
+                    {col.label}
+                  </span>
+                  {/* Sort indicator */}
+                  {isSorted && (
+                    <span style={{ color: theme.accent, fontSize: 9 }}>
+                      {sortConfig.direction === "asc" ? "▲" : "▼"}
+                    </span>
+                  )}
+                  {/* Filter indicator */}
+                  {hasFilter && (
+                    <span style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: theme.accent,
+                      flexShrink: 0,
+                    }} />
+                  )}
+                </button>
+
+                {/* Column Popover */}
+                {isPopoverOpen && col.field && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 8px)",
+                      ...(isRightAligned ? { right: 0 } : { left: 0 }),
+                      background: theme.panel,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: 8,
+                      padding: 12,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                      zIndex: 100,
+                      minWidth: 180,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Sort Options */}
+                    <div style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: "uppercase", marginBottom: 8 }}>
+                      Sort
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: showToggles ? 12 : 0 }}>
+                      <button
+                        onClick={() => handleSort(col.field, "asc")}
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          background: sortConfig?.field === col.field && sortConfig?.direction === "asc" ? theme.accentGlow : theme.surface,
+                          border: `1px solid ${sortConfig?.field === col.field && sortConfig?.direction === "asc" ? theme.accent : theme.border}`,
+                          borderRadius: 6,
+                          color: sortConfig?.field === col.field && sortConfig?.direction === "asc" ? theme.accent : theme.textSecondary,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>▲</span> A → Z
+                      </button>
+                      <button
+                        onClick={() => handleSort(col.field, "desc")}
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          background: sortConfig?.field === col.field && sortConfig?.direction === "desc" ? theme.accentGlow : theme.surface,
+                          border: `1px solid ${sortConfig?.field === col.field && sortConfig?.direction === "desc" ? theme.accent : theme.border}`,
+                          borderRadius: 6,
+                          color: sortConfig?.field === col.field && sortConfig?.direction === "desc" ? theme.accent : theme.textSecondary,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>▼</span> Z → A
+                      </button>
+                    </div>
+
+                    {/* Filter Toggles (only if <=10 unique values) */}
+                    {showToggles && uniqueValues.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: "uppercase", marginBottom: 8 }}>
+                          Show
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 200, overflowY: "auto" }}>
+                          {uniqueValues.map((val) => {
+                            const isExcluded = columnFilters[col.field]?.has(val);
+                            return (
+                              <button
+                                key={val}
+                                onClick={() => toggleColumnFilterValue(col.field, val)}
+                                style={{
+                                  padding: "6px 10px",
+                                  fontSize: 12,
+                                  background: isExcluded ? theme.surface : theme.accentGlow,
+                                  border: `1px solid ${isExcluded ? theme.border : theme.accent}`,
+                                  borderRadius: 6,
+                                  color: isExcluded ? theme.textMuted : theme.accent,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  opacity: isExcluded ? 0.6 : 1,
+                                  textDecoration: isExcluded ? "line-through" : "none",
+                                }}
+                              >
+                                <span style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 3,
+                                  border: `1px solid ${isExcluded ? theme.border : theme.accent}`,
+                                  background: isExcluded ? "transparent" : theme.accent,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 10,
+                                  color: "#fff",
+                                }}>
+                                  {!isExcluded && "✓"}
+                                </span>
+                                {val}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {hasFilter && (
+                          <button
+                            onClick={() => clearColumnFilter(col.field)}
+                            style={{
+                              marginTop: 8,
+                              padding: "6px 10px",
+                              fontSize: 12,
+                              background: theme.surface,
+                              border: `1px solid ${theme.border}`,
+                              borderRadius: 6,
+                              color: theme.textSecondary,
+                              cursor: "pointer",
+                              width: "100%",
+                            }}
+                          >
+                            Show all
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Click outside to close popovers */}
+        {(activeColumnPopover || showSearchPopover) && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 50,
+            }}
+            onClick={() => {
+              setActiveColumnPopover(null);
+              setShowSearchPopover(false);
+            }}
+          />
+        )}
 
         {/* Table Body */}
         <div style={{ flex: 1, overflow: "auto" }}>
-          {localAppointments.map((row, idx) => {
+          {filteredAppointments.map((row, idx) => {
             const isCanceled = row.Canceled === "TRUE";
             const isNoShow = row["No-Show"] === "TRUE";
             return (
@@ -3312,30 +3923,31 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
                 key={idx}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px 100px 90px 90px 80px 60px 140px 140px 80px 60px 1fr",
-                  padding: "14px 20px",
+                  gridTemplateColumns: "70px 90px 70px 70px 70px 50px 120px 120px 70px 50px 1fr",
+                  padding: "12px 20px",
                   borderBottom: `1px solid ${theme.borderLight}`,
-                  gap: 12,
+                  gap: 8,
                   alignItems: "center",
                   background: isCanceled ? theme.dangerGlow : isNoShow ? theme.warningGlow : idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
                   opacity: isCanceled ? 0.6 : 1,
                 }}
               >
-                <div style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "monospace" }}>
+                {/* APT-ID in first column (under icons) */}
+                <div style={{ fontSize: 11, color: theme.textSecondary, fontFamily: "monospace" }}>
                   {row["APT-ID"]}
                 </div>
-                <div style={{ fontSize: 13, color: theme.text }}>{row.Date}</div>
-                <div style={{ fontSize: 13, color: theme.text }}>{row["Start Time"]}</div>
-                <div style={{ fontSize: 13, color: theme.text }}>{row["End Time"]}</div>
-                <div style={{ fontSize: 13, color: theme.textSecondary }}>{row["Car ID"]}</div>
-                <div style={{ fontSize: 13, color: theme.textSecondary }}>{row.Location}</div>
-                <div style={{ fontSize: 13, color: theme.text }}>{row["Teacher Name"]}</div>
-                <div style={{ fontSize: 13, color: theme.text, fontWeight: 500 }}>{row["Student Name"]}</div>
+                <div style={{ fontSize: 12, color: theme.text }}>{row.Date}</div>
+                <div style={{ fontSize: 12, color: theme.text }}>{row["Start Time"]}</div>
+                <div style={{ fontSize: 12, color: theme.text }}>{row["End Time"]}</div>
+                <div style={{ fontSize: 12, color: theme.textSecondary }}>{row["Car ID"]}</div>
+                <div style={{ fontSize: 12, color: theme.textSecondary }}>{row.Location}</div>
+                <div style={{ fontSize: 12, color: theme.text }}>{row["Teacher Name"]}</div>
+                <div style={{ fontSize: 12, color: theme.text, fontWeight: 500 }}>{row["Student Name"]}</div>
                 <div>
                   <span style={{
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 500,
-                    padding: "3px 8px",
+                    padding: "2px 6px",
                     borderRadius: 4,
                     background: theme.accentGlow,
                     color: theme.accent,
@@ -3343,21 +3955,21 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
                     {row["Class ID"]}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, color: theme.textSecondary }}>{row.PUDO}</div>
-                <div style={{ fontSize: 12, color: theme.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 12, color: theme.textSecondary }}>{row.PUDO}</div>
+                <div style={{ fontSize: 11, color: theme.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {row.Notes}
                 </div>
               </div>
             );
           })}
-          {localAppointments.length === 0 && (
+          {filteredAppointments.length === 0 && (
             <div style={{
               padding: 40,
               textAlign: "center",
               color: theme.textSecondary,
             }}>
               <Icons.Calendar />
-              <p style={{ marginTop: 12 }}>No appointments scheduled</p>
+              <p style={{ marginTop: 12 }}>No appointments found</p>
             </div>
           )}
         </div>
@@ -4078,16 +4690,16 @@ export default function ExampleFrontend() {
         return <Students rows={data.students || []} />;
       case "instructors":
         return <Instructors rows={data.instructors || []} />;
-      case "calendar":
-        return (
-          <CalendarView
-            appointments={data.appointments || []}
-            schedule={data.teacherSchedule || []}
-            classKeys={data.classKeys || []}
-            locations={data.locations || []}
-            students={data.students || []}
-          />
-        );
+        case "calendar":
+          return (
+            <CalendarView
+              appointments={data.appointments || []}
+              instructors={data.instructors || []}
+              classKeys={data.classKeys || []}
+              locations={data.locations || []}
+              students={data.students || []}
+            />
+          );
       case "schedule":
         return (
           <Schedule
