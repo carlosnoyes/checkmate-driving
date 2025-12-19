@@ -1897,6 +1897,12 @@ function CalendarView({
     // Filter to only columns with appointments or availability
     const activeColumns = columns.filter(col => grouped[col].length > 0 || columnAvailability[col].length > 0);
 
+    // Add "Other" column at the end (always visible)
+    const OTHER_COLUMN = "Other";
+    grouped[OTHER_COLUMN] = filteredDayAppts.filter(apt => apt[groupBy] === OTHER_COLUMN);
+    columnAvailability[OTHER_COLUMN] = [];
+    const allColumns = [...activeColumns, OTHER_COLUMN];
+
     // Time range for the day (6 AM to 8 PM)
     const startHour = 6;
     const endHour = 20;
@@ -2044,7 +2050,7 @@ function CalendarView({
 
           {/* Timeline */}
           <div style={{ flex: 1, overflow: "hidden", padding: timelinePadding, height: availableHeight }}>
-            {activeColumns.length === 0 ? (
+            {allColumns.length === 1 && allColumns[0] === OTHER_COLUMN ? (
               <div style={{
                 textAlign: "center",
                 padding: 40,
@@ -2077,19 +2083,26 @@ function CalendarView({
                   display: "flex",
                   flex: 1,
                   gap: 2,
-                  overflow: "hidden",
+                  overflowX: "auto",
+                  overflowY: "hidden",
                 }}>
-                  {activeColumns.map(column => {
+                  {allColumns.map(column => {
+                    const isOtherColumn = column === OTHER_COLUMN;
                     const availabilitySlots = (columnAvailability[column] || []).filter((slot) => {
                       const key = viewMode === "car" ? slot.teacher_name : slot.car_id;
                       return !hiddenLegendMap[key];
                     });
 
+                    // Calculate column width based on number of columns
+                    const columnCount = allColumns.length;
+                    const minColWidth = columnCount > 6 ? 120 : 150;
+
                     return (
                     <div key={column} style={{
-                      flex: 1,
-                      minWidth: 150,
-                      maxWidth: 300,
+                      flex: columnCount <= 6 ? 1 : "0 0 auto",
+                      minWidth: minColWidth,
+                      maxWidth: columnCount <= 6 ? 300 : 180,
+                      width: columnCount > 6 ? minColWidth : undefined,
                     }}>
                       {/* Column header */}
                       <div style={{
@@ -2132,8 +2145,9 @@ function CalendarView({
                         // Always use the clicked time for start, not the slot's start time
                         const startTime = toTimeInputFromMinutes(startMinutes);
                         const endTime = addMinutesToTimeInput(startTime, 120);
-                        const carId = viewMode === "car" ? column : (matchedSlot ? matchedSlot.car_id : "");
-                        const teacherName = viewMode === "teacher" ? column : (matchedSlot ? matchedSlot.teacher_name : "");
+                        // For "Other" column, don't auto-populate car or instructor
+                        const carId = isOtherColumn ? "" : (viewMode === "car" ? column : (matchedSlot ? matchedSlot.car_id : ""));
+                        const teacherName = isOtherColumn ? "" : (viewMode === "teacher" ? column : (matchedSlot ? matchedSlot.teacher_name : ""));
                         setNewAppointmentDraft(
                           buildNewAppointmentDraft({
                             date: formatDateKey(date),
