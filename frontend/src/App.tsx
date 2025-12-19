@@ -7,7 +7,6 @@ import CommunicationsPage from './pages/CommunicationsPage';
 import ExampleFrontend from './ExampleFrontend';
 
 function ExamplePage() {
-  const navigate = useNavigate();
   return (
     <div
       style={{
@@ -19,25 +18,6 @@ function ExamplePage() {
         overflow: 'auto',
       }}
     >
-      <button
-        onClick={() => navigate('/students')}
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          zIndex: 10,
-          background: 'linear-gradient(135deg, #8b5cf6, #7dd3fc)',
-          color: '#0b1021',
-          border: 'none',
-          borderRadius: '12px',
-          padding: '10px 14px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-        }}
-      >
-        Close Example
-      </button>
       <ExampleFrontend />
     </div>
   );

@@ -1,5 +1,0 @@
-template_id,name,type,channel,trigger,enabled
-COM-01,Reminder - Lesson,Reminder,Email,24h before,Yes
-COM-02,Reschedule Offer,Action,Text,Missed lesson,Yes
-COM-03,Certificate Ready,Outcome,Email,Course completion,Yes
-COM-04,Payment Receipt,Transactional,Email,Payment posted,Yes

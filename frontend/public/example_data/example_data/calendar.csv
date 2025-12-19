@@ -1,5 +1,0 @@
-event_id,date,time,title,student,instructor,type,status
-EVT-001,2025-01-08,09:00,Drive Time - City,Jordan Patel,Dev Patel,Lesson,Confirmed
-EVT-002,2025-01-08,13:00,Drive Time - Highway,Avery Chen,Jake Morrison,Lesson,Confirmed
-EVT-003,2025-01-09,10:30,Permit Prep Webinar,River Singh,Helena Brooks,Online,Planned
-EVT-004,2025-01-10,16:00,Make-up Session,Morgan Lee,Samira Ochoa,Lesson,Tentative

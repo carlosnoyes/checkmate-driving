@@ -1,6 +1,56 @@
-id,name,status,enrolled_course,next_drive,progress_pct,advisor
-STU-001,Avery Chen,Active,Teen Defensive Driving,2025-01-10,65,Garcia
-STU-002,Jordan Patel,Active,Behind the Wheel,2025-01-09,40,Nguyen
-STU-003,Morgan Lee,Paused,Adult Brush Up,2025-01-12,20,Lopez
-STU-004,River Singh,Active,Permit Prep,2025-01-08,85,Williams
-STU-005,Casey Diaz,Graduated,Full Licensing Track,2024-12-28,100,Khan
+student_id,name,program_track,enrollment_status,next_drive,assigned_instructor,hours_logged,required_hours,permit_expiration,payment_status
+STU-001,Avery Chen,Teen Defensive Driving,Active,2025-01-10,Michelle Noyes,18,25,2025-04-15,Paid
+STU-002,Jordan Patel,Behind the Wheel,Active,2025-01-09,Jake Morrison,9,20,2025-05-01,Pending
+STU-003,Morgan Lee,Adult Brush Up,Paused,2025-01-12,Helena Brooks,7,20,2025-06-20,Pending
+STU-004,River Singh,Permit Prep,Active,2025-01-08,Dev Patel,12,20,2025-03-30,Paid
+STU-005,Casey Diaz,Full Licensing Track,Graduated,2024-12-28,Samira Ochoa,25,25,2025-02-10,Paid
+STU-006,Alexis Moore,Night Driving,Active,2025-01-11,Pat Reese,6,15,2025-07-15,Pending
+STU-007,Blake Turner,Highway Confidence,Active,2025-01-13,Michelle Noyes,5,15,2025-08-01,Pending
+STU-008,Cameron Young,Weekend Intensive,Active,2025-01-14,Jake Morrison,10,18,2025-05-18,Paid
+STU-009,Drew Hawkins,EV Familiarization,Active,2025-01-15,Helena Brooks,4,12,2025-09-05,Pending
+STU-010,Emery Soto,Defensive Driving Pro,Active,2025-01-16,Dev Patel,3,20,2025-10-20,Pending
+STU-011,Finley Garcia,Teen Defensive Driving,Active,2025-01-17,Samira Ochoa,14,25,2025-05-22,Paid
+STU-012,Hayden Kim,Behind the Wheel,Active,2025-01-18,Pat Reese,8,20,2025-06-15,Pending
+STU-013,Jamie Rodriguez,Permit Prep,Active,2025-01-19,Michelle Noyes,16,20,2025-04-08,Paid
+STU-014,Kendall Martinez,Full Licensing Track,Active,2025-01-20,Jake Morrison,22,25,2025-03-25,Paid
+STU-015,Logan Thompson,Adult Brush Up,Paused,2025-01-21,Helena Brooks,5,15,2025-07-30,Overdue
+STU-016,Madison White,Night Driving,Active,2025-01-22,Dev Patel,9,15,2025-08-12,Paid
+STU-017,Noah Anderson,Highway Confidence,Graduated,2024-12-15,Samira Ochoa,15,15,2025-02-28,Paid
+STU-018,Olivia Jackson,Weekend Intensive,Active,2025-01-23,Pat Reese,12,18,2025-05-05,Pending
+STU-019,Parker Davis,Teen Defensive Driving,Active,2025-01-24,Michelle Noyes,20,25,2025-06-18,Paid
+STU-020,Quinn Wilson,Behind the Wheel,Active,2025-01-25,Jake Morrison,6,20,2025-09-22,Pending
+STU-021,Riley Brown,Permit Prep,Paused,2025-01-26,Helena Brooks,3,20,2025-10-10,Overdue
+STU-022,Sawyer Taylor,Full Licensing Track,Active,2025-01-27,Dev Patel,19,25,2025-04-20,Paid
+STU-023,Taylor Moore,Adult Brush Up,Active,2025-01-28,Samira Ochoa,11,15,2025-07-08,Paid
+STU-024,Sage Martin,Night Driving,Active,2025-01-29,Pat Reese,7,15,2025-08-25,Pending
+STU-025,Jordan Lee,Highway Confidence,Active,2025-01-30,Michelle Noyes,13,15,2025-05-15,Paid
+STU-026,Avery Harris,Weekend Intensive,Graduated,2024-12-20,Jake Morrison,18,18,2025-03-10,Paid
+STU-027,Morgan Clark,Teen Defensive Driving,Active,2025-01-31,Helena Brooks,17,25,2025-06-28,Pending
+STU-028,Casey Lewis,Behind the Wheel,Active,2025-02-01,Dev Patel,4,20,2025-09-15,Pending
+STU-029,Alex Robinson,Permit Prep,Active,2025-02-02,Samira Ochoa,15,20,2025-10-05,Paid
+STU-030,Sam Walker,Full Licensing Track,Active,2025-02-03,Pat Reese,21,25,2025-04-30,Paid
+STU-031,Charlie Hall,Adult Brush Up,Paused,2025-02-04,Michelle Noyes,8,15,2025-07-22,Overdue
+STU-032,Devon Allen,Night Driving,Active,2025-02-05,Jake Morrison,10,15,2025-08-18,Paid
+STU-033,Ellis Young,Highway Confidence,Active,2025-02-06,Helena Brooks,12,15,2025-05-28,Pending
+STU-034,Frankie King,Weekend Intensive,Active,2025-02-07,Dev Patel,15,18,2025-06-10,Paid
+STU-035,Gray Wright,Teen Defensive Driving,Graduated,2024-12-22,Samira Ochoa,25,25,2025-02-15,Paid
+STU-036,Harper Scott,Behind the Wheel,Active,2025-02-08,Pat Reese,7,20,2025-09-08,Pending
+STU-037,Indigo Green,Permit Prep,Active,2025-02-09,Michelle Noyes,18,20,2025-10-18,Paid
+STU-038,Jules Adams,Full Licensing Track,Active,2025-02-10,Jake Morrison,23,25,2025-04-25,Paid
+STU-039,Kai Baker,Adult Brush Up,Active,2025-02-11,Helena Brooks,13,15,2025-07-15,Paid
+STU-040,Lane Nelson,Night Driving,Paused,2025-02-12,Dev Patel,4,15,2025-08-30,Overdue
+STU-041,Milan Carter,Highway Confidence,Active,2025-02-13,Samira Ochoa,11,15,2025-05-20,Pending
+STU-042,Noel Mitchell,Weekend Intensive,Active,2025-02-14,Pat Reese,16,18,2025-06-25,Paid
+STU-043,Ocean Perez,Teen Defensive Driving,Active,2025-02-15,Michelle Noyes,19,25,2025-09-12,Paid
+STU-044,Phoenix Roberts,Behind the Wheel,Active,2025-02-16,Jake Morrison,5,20,2025-10-28,Pending
+STU-045,Reese Turner,Permit Prep,Graduated,2024-12-18,Helena Brooks,20,20,2025-03-05,Paid
+STU-046,Skyler Phillips,Full Licensing Track,Active,2025-02-17,Dev Patel,20,25,2025-04-15,Paid
+STU-047,Tatum Campbell,Adult Brush Up,Active,2025-02-18,Samira Ochoa,14,15,2025-07-28,Pending
+STU-048,Unity Parker,Night Driving,Active,2025-02-19,Pat Reese,8,15,2025-08-08,Paid
+STU-049,Vale Evans,Highway Confidence,Active,2025-02-20,Michelle Noyes,10,15,2025-05-10,Paid
+STU-050,Winter Edwards,Weekend Intensive,Paused,2025-02-21,Jake Morrison,6,18,2025-06-05,Overdue
+STU-051,Xander Collins,Teen Defensive Driving,Active,2025-02-22,Helena Brooks,16,25,2025-09-20,Pending
+STU-052,Yuki Stewart,Behind the Wheel,Active,2025-02-23,Dev Patel,11,20,2025-10-15,Paid
+STU-053,Zion Sanchez,Permit Prep,Active,2025-02-24,Samira Ochoa,17,20,2025-04-05,Paid
+STU-054,Arden Morris,Full Licensing Track,Active,2025-02-25,Pat Reese,24,25,2025-07-10,Paid
+STU-055,Blair Rogers,Adult Brush Up,Graduated,2024-12-30,Michelle Noyes,15,15,2025-03-18,Paid
