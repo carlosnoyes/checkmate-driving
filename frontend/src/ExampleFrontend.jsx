@@ -1784,18 +1784,6 @@ function CalendarView({
     return `${parts[2]}-${month}-${day}`;
   }
 
-  function toTimeInput(timeStr) {
-    if (!timeStr) return "";
-    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (!match) return "";
-    let hours = parseInt(match[1]);
-    const minutes = match[2];
-    const period = match[3].toUpperCase();
-    if (period === "PM" && hours !== 12) hours += 12;
-    if (period === "AM" && hours === 12) hours = 0;
-    return `${String(hours).padStart(2, "0")}:${minutes}`;
-  }
-
   function toDateDisplay(value) {
     if (!value) return "";
     const parts = value.split("-");
@@ -2317,600 +2305,24 @@ function CalendarView({
     );
   };
 
-  const EditAppointmentModal = () => {
-    if (!selectedAppointment) return null;
-    const apt = selectedAppointment;
-    const [draft, setDraft] = useState({
-      studentName: apt["Student Name"] || "",
-      classId: apt["Class ID"] || "",
-      teacherName: apt["Teacher Name"] || "",
-      carId: apt["Car ID"] || "",
-      location: apt.Location || "",
-      date: toDateInput(apt.Date),
-      startTime: toTimeInput(apt["Start Time"]),
-      endTime: toTimeInput(apt["End Time"]),
-      canceled: apt.Canceled === "TRUE",
-      noShow: apt["No-Show"] === "TRUE",
-      notes: apt.Notes || "",
-    });
-
-    const onSubmit = (e) => {
-      e.preventDefault();
-      const updated = {
-        ...apt,
-        "Student Name": draft.studentName,
-        "Class ID": draft.classId,
-        "Teacher Name": draft.teacherName,
-        "Car ID": draft.carId,
-        Location: draft.location,
-        Date: toDateDisplay(draft.date),
-        "Start Time": toTimeDisplay(draft.startTime),
-        "End Time": toTimeDisplay(draft.endTime),
-        Canceled: draft.canceled ? "TRUE" : "FALSE",
-        "No-Show": draft.noShow ? "TRUE" : "FALSE",
-        Notes: draft.notes,
-      };
-      handleAppointmentUpdate(updated);
+  // Handler for saving new appointments from shared form
+  const handleNewAppointmentSave = (draft) => {
+    const newApt = {
+      "APT-ID": generateAppointmentId(),
+      Date: toDateDisplay(draft.date),
+      "Start Time": toTimeDisplay(draft.startTime),
+      "End Time": toTimeDisplay(draft.endTime),
+      "Car ID": draft.carId,
+      Location: draft.location,
+      "Teacher Name": draft.teacherName,
+      "Student Name": draft.studentName,
+      "Class ID": draft.classId,
+      PUDO: "0",
+      Canceled: "FALSE",
+      "No-Show": "FALSE",
+      Notes: draft.notes,
     };
-
-    return (
-      <div style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.75)",
-        backdropFilter: "blur(4px)",
-        zIndex: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-      }} onClick={() => setSelectedAppointment(null)}>
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: theme.panel,
-            border: `1px solid ${theme.border}`,
-            borderRadius: 16,
-            width: "min(92vw, 620px)",
-            maxHeight: "90vh",
-            overflow: "auto",
-            padding: 20,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div>
-              <div style={{ color: theme.text, fontSize: 18, fontWeight: 600 }}>Edit Appointment</div>
-              <div style={{ color: theme.textSecondary, fontSize: 12 }}>{apt["APT-ID"]}</div>
-            </div>
-            <button
-              onClick={() => setSelectedAppointment(null)}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                background: theme.surface,
-                border: `1px solid ${theme.border}`,
-                color: theme.textSecondary,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icons.X />
-            </button>
-          </div>
-
-          <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Student</div>
-                <input
-                  value={draft.studentName}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, studentName: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Class</div>
-                <input
-                  value={draft.classId}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, classId: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Instructor</div>
-                <select
-                  value={draft.teacherName}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, teacherName: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  {uniqueTeachers.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Car</div>
-                <select
-                  value={draft.carId}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, carId: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  {uniqueCars.map((car) => (
-                    <option key={car} value={car}>{car}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Date</div>
-                <input
-                  type="date"
-                  value={draft.date}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, date: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Location</div>
-                <input
-                  value={draft.location}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, location: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Start Time</div>
-                <input
-                  type="time"
-                  value={draft.startTime}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, startTime: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>End Time</div>
-                <input
-                  type="time"
-                  value={draft.endTime}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, endTime: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 16 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, color: theme.textSecondary, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={draft.canceled}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, canceled: e.target.checked }))}
-                />
-                Canceled
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, color: theme.textSecondary, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={draft.noShow}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, noShow: e.target.checked }))}
-                />
-                No-Show
-              </label>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Notes</div>
-              <textarea
-                rows={3}
-                value={draft.notes}
-                onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: `1px solid ${theme.border}`,
-                  background: theme.surface,
-                  color: theme.text,
-                  resize: "vertical",
-                }}
-              />
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => setSelectedAppointment(null)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  background: "transparent",
-                  border: `1px solid ${theme.border}`,
-                  color: theme.textSecondary,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  background: theme.gradient,
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
-  const NewAppointmentModal = () => {
-    const [draft, setDraft] = useState(newAppointmentDraft || {});
-
-    useEffect(() => {
-      if (newAppointmentDraft) {
-        setDraft(newAppointmentDraft);
-      }
-    }, [newAppointmentDraft]);
-
-    if (!newAppointmentDraft) return null;
-
-    const onSubmit = (e) => {
-      e.preventDefault();
-      const newApt = {
-        "APT-ID": generateAppointmentId(),
-        Date: toDateDisplay(draft.date),
-        "Start Time": toTimeDisplay(draft.startTime),
-        "End Time": toTimeDisplay(draft.endTime),
-        "Car ID": draft.carId,
-        Location: draft.location,
-        "Teacher Name": draft.teacherName,
-        "Student Name": draft.studentName,
-        "Class ID": draft.classId,
-        PUDO: "0",
-        Canceled: "FALSE",
-        "No-Show": "FALSE",
-        Notes: draft.notes,
-      };
-      setLocalAppointments((prev) => [...prev, newApt]);
-      setNewAppointmentDraft(null);
-    };
-
-    return (
-      <div style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.75)",
-        backdropFilter: "blur(4px)",
-        zIndex: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-      }} onClick={() => setNewAppointmentDraft(null)}>
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: theme.panel,
-            border: `1px solid ${theme.border}`,
-            borderRadius: 16,
-            width: "min(92vw, 620px)",
-            maxHeight: "90vh",
-            overflow: "auto",
-            padding: 20,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div>
-              <div style={{ color: theme.text, fontSize: 18, fontWeight: 600 }}>New Appointment</div>
-              <div style={{ color: theme.textSecondary, fontSize: 12 }}>{toDateDisplay(draft.date)}</div>
-            </div>
-            <button
-              onClick={() => setNewAppointmentDraft(null)}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                background: theme.surface,
-                border: `1px solid ${theme.border}`,
-                color: theme.textSecondary,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icons.X />
-            </button>
-          </div>
-
-          <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Student</div>
-                <select
-                  value={draft.studentName}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, studentName: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Select student</option>
-                  {(students || []).map((s) => (
-                    <option key={s.student_id || s.name} value={s.name}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Class</div>
-                <select
-                  value={draft.classId}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, classId: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Select class</option>
-                  {(classKeys || []).map((row) => (
-                    <option key={row["Class Key"]} value={row["Class Key"]}>{row["Class Key"]}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Instructor</div>
-                <select
-                  value={draft.teacherName}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, teacherName: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Select instructor</option>
-                  {uniqueTeachers.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Car</div>
-                <select
-                  value={draft.carId}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, carId: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Select car</option>
-                  {uniqueCars.map((car) => (
-                    <option key={car} value={car}>{car}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Date</div>
-                <input
-                  type="date"
-                  value={draft.date}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, date: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Location</div>
-                <select
-                  value={draft.location}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, location: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Select location</option>
-                  {(locations || []).map((row) => (
-                    <option key={row.Location} value={row.Location}>{row.Location}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Start Time</div>
-                <input
-                  type="time"
-                  value={draft.startTime}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, startTime: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>End Time</div>
-                <input
-                  type="time"
-                  value={draft.endTime}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, endTime: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: `1px solid ${theme.border}`,
-                    background: theme.surface,
-                    color: theme.text,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Notes</div>
-              <textarea
-                rows={3}
-                value={draft.notes}
-                onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: `1px solid ${theme.border}`,
-                  background: theme.surface,
-                  color: theme.text,
-                  resize: "vertical",
-                }}
-              />
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => setNewAppointmentDraft(null)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  background: "transparent",
-                  border: `1px solid ${theme.border}`,
-                  color: theme.textSecondary,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  background: theme.gradient,
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Create
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
+    setLocalAppointments((prev) => [...prev, newApt]);
   };
 
   return (
@@ -3315,11 +2727,28 @@ function CalendarView({
       {/* Hover tooltip */}
       <HoverTooltip />
 
-      {/* New appointment modal */}
-      <NewAppointmentModal />
+      {/* New appointment modal - using shared component */}
+      <NewAppointmentForm
+        isOpen={!!newAppointmentDraft}
+        onClose={() => setNewAppointmentDraft(null)}
+        onSave={handleNewAppointmentSave}
+        initialDraft={newAppointmentDraft || {}}
+        classKeys={classKeys}
+        locations={locations}
+        students={students}
+        uniqueCars={uniqueCars}
+        uniqueTeachers={uniqueTeachers}
+      />
 
-      {/* Edit appointment modal */}
-      <EditAppointmentModal />
+      {/* Edit appointment modal - using shared component */}
+      <EditAppointmentForm
+        isOpen={!!selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
+        onSave={handleAppointmentUpdate}
+        appointment={selectedAppointment}
+        uniqueCars={uniqueCars}
+        uniqueTeachers={uniqueTeachers}
+      />
 
       {/* Day detail modal */}
       {selectedDay && (
@@ -3366,8 +2795,674 @@ function generateTimeSlots() {
   return slots;
 }
 
+// ============================================================================
+// SHARED APPOINTMENT FORM COMPONENTS
+// ============================================================================
+
+// Shared modal wrapper component
+function AppointmentModalWrapper({ isOpen, onClose, children }) {
+  if (!isOpen) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(4px)",
+        zIndex: 200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: theme.panel,
+          border: `1px solid ${theme.border}`,
+          borderRadius: 16,
+          width: "min(92vw, 620px)",
+          maxHeight: "90vh",
+          overflow: "auto",
+          padding: 20,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Form field styles used by both forms
+const formFieldStyle = {
+  width: "100%",
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: `1px solid ${theme.border}`,
+  background: theme.surface,
+  color: theme.text,
+};
+
+const formLabelStyle = {
+  fontSize: 12,
+  color: theme.textMuted,
+  marginBottom: 6,
+};
+
+// Shared New Appointment Form - NO cancel/no-show options
+function NewAppointmentForm({
+  isOpen,
+  onClose,
+  onSave,
+  initialDraft = {},
+  classKeys = [],
+  cars = [],
+  locations = [],
+  teachers = [],
+  students = [],
+  uniqueCars = [],
+  uniqueTeachers = [],
+}) {
+  const [draft, setDraft] = useState({
+    studentName: "",
+    classId: "",
+    teacherName: "",
+    carId: "",
+    location: "",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "09:00",
+    endTime: "11:00",
+    notes: "",
+    ...initialDraft,
+  });
+  const [studentSearch, setStudentSearch] = useState("");
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
+
+  // Sync with initialDraft when it changes
+  useEffect(() => {
+    if (initialDraft && Object.keys(initialDraft).length > 0) {
+      setDraft((prev) => ({ ...prev, ...initialDraft }));
+    }
+  }, [initialDraft]);
+
+  // Filter students based on search
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch.trim()) return students || [];
+    const term = studentSearch.toLowerCase();
+    return (students || []).filter(
+      (s) =>
+        s.name?.toLowerCase().includes(term) ||
+        s.student_id?.toLowerCase().includes(term)
+    );
+  }, [students, studentSearch]);
+
+  // Get available teachers - prefer uniqueTeachers, fallback to teachers array
+  const availableTeachers = useMemo(() => {
+    if (uniqueTeachers && uniqueTeachers.length > 0) return uniqueTeachers;
+    return (teachers || []).map((t) => t["Teacher Name"] || t.name).filter(Boolean);
+  }, [uniqueTeachers, teachers]);
+
+  // Get available cars - prefer uniqueCars, fallback to cars array
+  const availableCars = useMemo(() => {
+    if (uniqueCars && uniqueCars.length > 0) return uniqueCars;
+    return (cars || []).map((c) => c["Car ID"] || c.car_id).filter(Boolean);
+  }, [uniqueCars, cars]);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    onSave(draft);
+    onClose();
+  };
+
+  // Helper to format date for display
+  const formatDateDisplay = (value) => {
+    if (!value) return "";
+    const parts = value.split("-");
+    if (parts.length !== 3) return value;
+    return `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+  };
+
+  return (
+    <AppointmentModalWrapper isOpen={isOpen} onClose={onClose}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div>
+          <div style={{ color: theme.text, fontSize: 18, fontWeight: 600 }}>New Appointment</div>
+          <div style={{ color: theme.textSecondary, fontSize: 12 }}>{formatDateDisplay(draft.date)}</div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            background: theme.surface,
+            border: `1px solid ${theme.border}`,
+            color: theme.textSecondary,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icons.X />
+        </button>
+      </div>
+
+      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ position: "relative" }}>
+            <div style={formLabelStyle}>Student</div>
+            <input
+              value={draft.studentName || studentSearch}
+              onChange={(e) => {
+                setStudentSearch(e.target.value);
+                setDraft((prev) => ({ ...prev, studentName: "" }));
+                setShowStudentDropdown(true);
+              }}
+              onFocus={() => setShowStudentDropdown(true)}
+              placeholder="Search students..."
+              style={formFieldStyle}
+            />
+            {showStudentDropdown && studentSearch && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  background: theme.surface,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 8,
+                  marginTop: 4,
+                  maxHeight: 150,
+                  overflow: "auto",
+                  zIndex: 100,
+                }}
+              >
+                {filteredStudents.slice(0, 10).map((s) => (
+                  <div
+                    key={s.student_id || s.name}
+                    onClick={() => {
+                      setDraft((prev) => ({ ...prev, studentName: s.name }));
+                      setStudentSearch("");
+                      setShowStudentDropdown(false);
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      cursor: "pointer",
+                      borderBottom: `1px solid ${theme.borderLight}`,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = theme.surfaceHover)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <div style={{ fontSize: 13, color: theme.text }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: theme.textMuted }}>{s.student_id}</div>
+                  </div>
+                ))}
+                {filteredStudents.length === 0 && (
+                  <div style={{ padding: "8px 10px", color: theme.textMuted, fontSize: 12 }}>No students found</div>
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            <div style={formLabelStyle}>Class</div>
+            <select
+              value={draft.classId}
+              onChange={(e) => setDraft((prev) => ({ ...prev, classId: e.target.value }))}
+              style={formFieldStyle}
+            >
+              <option value="">Select class</option>
+              {(classKeys || []).map((row) => (
+                <option key={row["Class Key"]} value={row["Class Key"]}>
+                  {row["Class Key"]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Instructor</div>
+            <select
+              value={draft.teacherName}
+              onChange={(e) => setDraft((prev) => ({ ...prev, teacherName: e.target.value }))}
+              style={formFieldStyle}
+            >
+              <option value="">Select instructor</option>
+              {availableTeachers.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div style={formLabelStyle}>Car</div>
+            <select
+              value={draft.carId}
+              onChange={(e) => setDraft((prev) => ({ ...prev, carId: e.target.value }))}
+              style={formFieldStyle}
+            >
+              <option value="">Select car</option>
+              {availableCars.map((car) => (
+                <option key={car} value={car}>
+                  {car}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Date</div>
+            <input
+              type="date"
+              value={draft.date}
+              onChange={(e) => setDraft((prev) => ({ ...prev, date: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+          <div>
+            <div style={formLabelStyle}>Location</div>
+            <select
+              value={draft.location}
+              onChange={(e) => setDraft((prev) => ({ ...prev, location: e.target.value }))}
+              style={formFieldStyle}
+            >
+              <option value="">Select location</option>
+              {(locations || []).map((row) => (
+                <option key={row.Location} value={row.Location}>
+                  {row.Location}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Start Time</div>
+            <input
+              type="time"
+              value={draft.startTime}
+              onChange={(e) => setDraft((prev) => ({ ...prev, startTime: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+          <div>
+            <div style={formLabelStyle}>End Time</div>
+            <input
+              type="time"
+              value={draft.endTime}
+              onChange={(e) => setDraft((prev) => ({ ...prev, endTime: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+        </div>
+
+        <div>
+          <div style={formLabelStyle}>Notes</div>
+          <textarea
+            rows={3}
+            value={draft.notes}
+            onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
+            style={{ ...formFieldStyle, resize: "vertical" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 8,
+              background: "transparent",
+              border: `1px solid ${theme.border}`,
+              color: theme.textSecondary,
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              background: theme.gradient,
+              border: "none",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Create
+          </button>
+        </div>
+      </form>
+    </AppointmentModalWrapper>
+  );
+}
+
+// Shared Edit Appointment Form - HAS cancel/no-show options
+function EditAppointmentForm({
+  isOpen,
+  onClose,
+  onSave,
+  appointment,
+  classKeys = [],
+  cars = [],
+  locations = [],
+  teachers = [],
+  students = [],
+  uniqueCars = [],
+  uniqueTeachers = [],
+}) {
+  // Helper functions for date/time conversion
+  const toDateInput = (dateStr) => {
+    const parts = (dateStr || "").split("/");
+    if (parts.length !== 3) return "";
+    const month = parts[0].padStart(2, "0");
+    const day = parts[1].padStart(2, "0");
+    return `${parts[2]}-${month}-${day}`;
+  };
+
+  const toTimeInput = (timeStr) => {
+    if (!timeStr) return "";
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return "";
+    let hours = parseInt(match[1]);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  };
+
+  const [draft, setDraft] = useState({
+    studentName: appointment?.["Student Name"] || "",
+    classId: appointment?.["Class ID"] || "",
+    teacherName: appointment?.["Teacher Name"] || "",
+    carId: appointment?.["Car ID"] || "",
+    location: appointment?.Location || "",
+    date: toDateInput(appointment?.Date),
+    startTime: toTimeInput(appointment?.["Start Time"]),
+    endTime: toTimeInput(appointment?.["End Time"]),
+    canceled: appointment?.Canceled === "TRUE",
+    noShow: appointment?.["No-Show"] === "TRUE",
+    notes: appointment?.Notes || "",
+  });
+
+  // Sync with appointment when it changes
+  useEffect(() => {
+    if (appointment) {
+      setDraft({
+        studentName: appointment["Student Name"] || "",
+        classId: appointment["Class ID"] || "",
+        teacherName: appointment["Teacher Name"] || "",
+        carId: appointment["Car ID"] || "",
+        location: appointment.Location || "",
+        date: toDateInput(appointment.Date),
+        startTime: toTimeInput(appointment["Start Time"]),
+        endTime: toTimeInput(appointment["End Time"]),
+        canceled: appointment.Canceled === "TRUE",
+        noShow: appointment["No-Show"] === "TRUE",
+        notes: appointment.Notes || "",
+      });
+    }
+  }, [appointment]);
+
+  // Get available teachers - prefer uniqueTeachers, fallback to teachers array
+  const availableTeachers = useMemo(() => {
+    if (uniqueTeachers && uniqueTeachers.length > 0) return uniqueTeachers;
+    return (teachers || []).map((t) => t["Teacher Name"] || t.name).filter(Boolean);
+  }, [uniqueTeachers, teachers]);
+
+  // Get available cars - prefer uniqueCars, fallback to cars array
+  const availableCars = useMemo(() => {
+    if (uniqueCars && uniqueCars.length > 0) return uniqueCars;
+    return (cars || []).map((c) => c["Car ID"] || c.car_id).filter(Boolean);
+  }, [uniqueCars, cars]);
+
+  // Helper to format time for display (24h to 12h AM/PM)
+  const toTimeDisplay = (value) => {
+    if (!value) return "";
+    const parts = value.split(":");
+    if (parts.length !== 2) return "";
+    let hours = parseInt(parts[0]);
+    const minutes = parts[1];
+    const period = hours >= 12 ? "PM" : "AM";
+    if (hours > 12) hours -= 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${minutes} ${period}`;
+  };
+
+  // Helper to format date for display (yyyy-mm-dd to m/d/yyyy)
+  const toDateDisplay = (value) => {
+    if (!value) return "";
+    const parts = value.split("-");
+    if (parts.length !== 3) return "";
+    return `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+  };
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const updated = {
+      ...appointment,
+      "Student Name": draft.studentName,
+      "Class ID": draft.classId,
+      "Teacher Name": draft.teacherName,
+      "Car ID": draft.carId,
+      Location: draft.location,
+      Date: toDateDisplay(draft.date),
+      "Start Time": toTimeDisplay(draft.startTime),
+      "End Time": toTimeDisplay(draft.endTime),
+      Canceled: draft.canceled ? "TRUE" : "FALSE",
+      "No-Show": draft.noShow ? "TRUE" : "FALSE",
+      Notes: draft.notes,
+    };
+    onSave(updated);
+    onClose();
+  };
+
+  if (!appointment) return null;
+
+  return (
+    <AppointmentModalWrapper isOpen={isOpen} onClose={onClose}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div>
+          <div style={{ color: theme.text, fontSize: 18, fontWeight: 600 }}>Edit Appointment</div>
+          <div style={{ color: theme.textSecondary, fontSize: 12 }}>{appointment["APT-ID"]}</div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            background: theme.surface,
+            border: `1px solid ${theme.border}`,
+            color: theme.textSecondary,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icons.X />
+        </button>
+      </div>
+
+      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Student</div>
+            <input
+              value={draft.studentName}
+              onChange={(e) => setDraft((prev) => ({ ...prev, studentName: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+          <div>
+            <div style={formLabelStyle}>Class</div>
+            <input
+              value={draft.classId}
+              onChange={(e) => setDraft((prev) => ({ ...prev, classId: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Instructor</div>
+            <select
+              value={draft.teacherName}
+              onChange={(e) => setDraft((prev) => ({ ...prev, teacherName: e.target.value }))}
+              style={formFieldStyle}
+            >
+              {availableTeachers.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div style={formLabelStyle}>Car</div>
+            <select
+              value={draft.carId}
+              onChange={(e) => setDraft((prev) => ({ ...prev, carId: e.target.value }))}
+              style={formFieldStyle}
+            >
+              {availableCars.map((car) => (
+                <option key={car} value={car}>
+                  {car}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Date</div>
+            <input
+              type="date"
+              value={draft.date}
+              onChange={(e) => setDraft((prev) => ({ ...prev, date: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+          <div>
+            <div style={formLabelStyle}>Location</div>
+            <input
+              value={draft.location}
+              onChange={(e) => setDraft((prev) => ({ ...prev, location: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={formLabelStyle}>Start Time</div>
+            <input
+              type="time"
+              value={draft.startTime}
+              onChange={(e) => setDraft((prev) => ({ ...prev, startTime: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+          <div>
+            <div style={formLabelStyle}>End Time</div>
+            <input
+              type="time"
+              value={draft.endTime}
+              onChange={(e) => setDraft((prev) => ({ ...prev, endTime: e.target.value }))}
+              style={formFieldStyle}
+            />
+          </div>
+        </div>
+
+        {/* Cancel / No-Show checkboxes - ONLY in Edit form */}
+        <div style={{ display: "flex", gap: 16 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, color: theme.textSecondary, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.canceled}
+              onChange={(e) => setDraft((prev) => ({ ...prev, canceled: e.target.checked }))}
+            />
+            Canceled
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, color: theme.textSecondary, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.noShow}
+              onChange={(e) => setDraft((prev) => ({ ...prev, noShow: e.target.checked }))}
+            />
+            No-Show
+          </label>
+        </div>
+
+        <div>
+          <div style={formLabelStyle}>Notes</div>
+          <textarea
+            rows={3}
+            value={draft.notes}
+            onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
+            style={{ ...formFieldStyle, resize: "vertical" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 8,
+              background: "transparent",
+              border: `1px solid ${theme.border}`,
+              color: theme.textSecondary,
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              background: theme.gradient,
+              border: "none",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Save
+          </button>
+        </div>
+      </form>
+    </AppointmentModalWrapper>
+  );
+}
+
+// ============================================================================
+// END SHARED APPOINTMENT FORM COMPONENTS
+// ============================================================================
+
 function Schedule({ appointments, classKeys, cars, locations, teachers, students }) {
   const [showForm, setShowForm] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [studentSearch, setStudentSearch] = useState("");
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [localAppointments, setLocalAppointments] = useState(appointments || []);
@@ -3572,6 +3667,14 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
     });
     setStudentSearch("");
   }
+
+  // Handler for updating existing appointments
+  const handleAppointmentUpdate = (updated) => {
+    setLocalAppointments((prev) =>
+      prev.map((apt) => (apt["APT-ID"] === updated["APT-ID"] ? updated : apt))
+    );
+    setSelectedAppointment(null);
+  };
 
   const inputStyle = {
     background: theme.surface,
@@ -3935,6 +4038,7 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
             return (
               <div
                 key={idx}
+                onClick={() => setSelectedAppointment(row)}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "70px 90px 70px 70px 70px 50px 120px 120px 70px 50px 1fr",
@@ -3944,7 +4048,11 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
                   alignItems: "center",
                   background: isCanceled ? theme.dangerGlow : isNoShow ? theme.warningGlow : idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
                   opacity: isCanceled ? 0.6 : 1,
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
                 }}
+                onMouseEnter={(e) => { if (!isCanceled && !isNoShow) e.currentTarget.style.background = theme.surfaceHover; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = isCanceled ? theme.dangerGlow : isNoShow ? theme.warningGlow : idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)"; }}
               >
                 {/* APT-ID in first column (under icons) */}
                 <div style={{ fontSize: 11, color: theme.textSecondary, fontFamily: "monospace" }}>
@@ -4378,6 +4486,17 @@ function Schedule({ appointments, classKeys, cars, locations, teachers, students
           </div>
         </div>
       )}
+
+      {/* Edit Appointment Modal - using shared component */}
+      <EditAppointmentForm
+        isOpen={!!selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
+        onSave={handleAppointmentUpdate}
+        appointment={selectedAppointment}
+        cars={cars}
+        locations={locations}
+        teachers={teachers}
+      />
     </div>
   );
 }
