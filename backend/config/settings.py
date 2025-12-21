@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.orgs",
     "apps.students",
     "apps.appointments",
+    "apps.resources",
     "apps.scheduling",
     "apps.communications",
 ]

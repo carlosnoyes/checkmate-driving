@@ -18,3 +18,13 @@ export async function createAppointment(payload: Omit<Appointment, "id">): Promi
   if (!response.ok) throw new Error("Failed to create appointment");
   return response.json();
 }
+
+export async function updateAppointment(id: number, payload: Partial<Omit<Appointment, "id">>): Promise<Appointment> {
+  const response = await fetch(`${baseUrl}${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("Failed to update appointment");
+  return response.json();
+}

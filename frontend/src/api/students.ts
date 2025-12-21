@@ -22,3 +22,13 @@ export async function createStudent(payload: Omit<Student, "id" | "created_at">)
   }
   return response.json();
 }
+
+export async function updateStudent(id: number, payload: Partial<Omit<Student, "id" | "created_at">>): Promise<Student> {
+  const response = await fetch(`${baseUrl}${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("Failed to update student");
+  return response.json();
+}

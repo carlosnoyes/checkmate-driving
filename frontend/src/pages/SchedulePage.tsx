@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { createAppointment, listAppointments, updateAppointment } from "../api/appointments";
+import { listInstructorAvailability } from "../api/resources";
 import { listUsers } from "../api/users";
 import { listCars, listClassKeys, listLocations } from "../api/resources";
 import { listStudents } from "../api/students";
 import { AppointmentFormModal } from "../components/forms/AppointmentFormModal";
 import { DataTable } from "../components/table/DataTable";
 import { Appointment } from "../types/appointment";
+import { InstructorAvailability } from "../types/availability";
 import { Car } from "../types/car";
 import { ClassKey } from "../types/classKey";
 import { Location } from "../types/location";
 import { Student } from "../types/student";
 import { User } from "../types/user";
 
-export default function CalendarPage() {
+export default function SchedulePage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [availability, setAvailability] = useState<InstructorAvailability[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [instructors, setInstructors] = useState<User[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
@@ -23,8 +26,9 @@ export default function CalendarPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   async function load() {
-    const [aptData, studentData, userData, carData, locationData, classKeyData] = await Promise.all([
+    const [aptData, availabilityData, studentData, userData, carData, locationData, classKeyData] = await Promise.all([
       listAppointments(),
+      listInstructorAvailability(),
       listStudents(),
       listUsers(),
       listCars(),
@@ -32,6 +36,7 @@ export default function CalendarPage() {
       listClassKeys(),
     ]);
     setAppointments(aptData);
+    setAvailability(availabilityData);
     setStudents(studentData);
     setInstructors(userData.filter((user) => user.role === "instructor" || !user.role));
     setCars(carData);
@@ -43,7 +48,7 @@ export default function CalendarPage() {
     load();
   }, []);
 
-  const columns = useMemo(
+  const appointmentColumns = useMemo(
     () => [
       { key: "start_at", label: "Start" },
       { key: "end_at", label: "End" },
@@ -70,11 +75,28 @@ export default function CalendarPage() {
     []
   );
 
+  const availabilityColumns = useMemo(
+    () => [
+      { key: "day", label: "Day" },
+      { key: "start_time", label: "Start" },
+      { key: "end_time", label: "End" },
+      { key: "instructor_name", label: "Instructor" },
+      { key: "location_name", label: "Location" },
+      {
+        key: "status",
+        label: "Status",
+        getValue: (row: InstructorAvailability) =>
+          row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "",
+      },
+    ],
+    []
+  );
+
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div style={{ display: "grid", gap: 20 }}>
       <DataTable
-        title="Calendar"
-        columns={columns}
+        title="Schedule"
+        columns={appointmentColumns}
         rows={appointments}
         addLabel="New Appointment"
         onAdd={() => {
@@ -86,6 +108,7 @@ export default function CalendarPage() {
           setIsFormOpen(true);
         }}
       />
+      <DataTable title="Instructor Availability" columns={availabilityColumns} rows={availability} />
       <AppointmentFormModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from apps.resources.models import Car, ClassKey, Location
 
 
 class Appointment(models.Model):
@@ -19,9 +20,32 @@ class Appointment(models.Model):
         null=True,
         blank=True,
     )
+    car = models.ForeignKey(
+        Car,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appointments",
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appointments",
+    )
+    class_key = models.ForeignKey(
+        ClassKey,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appointments",
+    )
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default="scheduled")
+    pudo = models.BooleanField(default=False)
+    no_show = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

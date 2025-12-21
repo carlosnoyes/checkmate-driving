@@ -1,41 +1,33 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import AppLayout from './layouts/AppLayout';
-import CalendarPage from './pages/CalendarPage';
-import StudentsPage from './pages/StudentsPage';
-import AdminSetupPage from './pages/AdminSetupPage';
-import CommunicationsPage from './pages/CommunicationsPage';
-import ExampleFrontend from './ExampleFrontend';
-
-function ExamplePage() {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: '#0f172a',
-        margin: 0,
-        padding: 0,
-        overflow: 'auto',
-      }}
-    >
-      <ExampleFrontend />
-    </div>
-  );
-}
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AppLayout from "./layouts/AppLayout";
+import CalendarPage from "./pages/CalendarPage";
+import StudentsPage from "./pages/StudentsPage";
+import AdminSetupPage from "./pages/AdminSetupPage";
+import CommunicationsPage from "./pages/CommunicationsPage";
+import ComingSoonPage from "./pages/ComingSoonPage";
+import SchedulePage from "./pages/SchedulePage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppLayout />}>
-          <Route index element={<Navigate to="/wireframe" replace />} />
+          <Route index element={<Navigate to="/students" replace />} />
           <Route path="admin/setup" element={<AdminSetupPage />} />
           <Route path="students" element={<StudentsPage />} />
-          <Route path="schedule" element={<CalendarPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="schedule" element={<SchedulePage />} />
           <Route path="communications" element={<CommunicationsPage />} />
-          <Route path="wireframe" element={<ExampleFrontend />} />
+          <Route path="instructors" element={<ComingSoonPage title="Instructors" />} />
+          <Route path="payments" element={<ComingSoonPage title="Payments" />} />
+          <Route path="crm" element={<ComingSoonPage title="CRM" />} />
+          <Route path="metrics" element={<ComingSoonPage title="Data Tracking" />} />
+          <Route path="portal" element={<ComingSoonPage title="Student Portal" />} />
+          <Route path="learning" element={<ComingSoonPage title="Learning" />} />
+          <Route path="registration" element={<ComingSoonPage title="Registration" />} />
+          <Route path="payroll" element={<ComingSoonPage title="Payroll" />} />
+          <Route path="dmv" element={<ComingSoonPage title="DMV Compliance" />} />
         </Route>
-        <Route path="/example" element={<ExamplePage />} />
         <Route path="*" element={<Navigate to="/students" replace />} />
       </Routes>
     </BrowserRouter>

@@ -13,11 +13,17 @@ class AppointmentFilter(FilterSet):
 
     class Meta:
         model = Appointment
-        fields = ["student", "instructor", "status", "start_at", "end_at"]
+        fields = ["student", "instructor", "car", "location", "class_key", "status", "pudo", "no_show", "start_at", "end_at"]
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
-    queryset = Appointment.objects.select_related("student", "instructor").order_by("-start_at")
+    queryset = Appointment.objects.select_related(
+        "student",
+        "instructor",
+        "car",
+        "location",
+        "class_key",
+    ).order_by("-start_at")
     serializer_class = AppointmentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = AppointmentFilter

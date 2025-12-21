@@ -1,18 +1,37 @@
 from rest_framework import serializers
 from apps.scheduling.services import validate_appointment_window
+from apps.students.serializers import StudentSerializer
+from apps.users.serializers import UserSerializer
+from apps.resources.serializers import CarSerializer, ClassKeySerializer, LocationSerializer
 from .models import Appointment
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    student_detail = StudentSerializer(source="student", read_only=True)
+    instructor_detail = UserSerializer(source="instructor", read_only=True)
+    car_detail = CarSerializer(source="car", read_only=True)
+    location_detail = LocationSerializer(source="location", read_only=True)
+    class_key_detail = ClassKeySerializer(source="class_key", read_only=True)
+
     class Meta:
         model = Appointment
         fields = [
             "id",
             "student",
+            "student_detail",
             "instructor",
+            "instructor_detail",
+            "car",
+            "car_detail",
+            "location",
+            "location_detail",
+            "class_key",
+            "class_key_detail",
             "start_at",
             "end_at",
             "status",
+            "pudo",
+            "no_show",
             "notes",
             "created_at",
             "updated_at",
